@@ -5,10 +5,11 @@ const LS = {
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* privatni način */ } },
   del(k) { try { localStorage.removeItem(k); } catch { /* */ } },
 };
-const TYPE = { struja: ['Struja', 'var(--struja)'], voda: ['Voda', 'var(--voda)'], plin: ['Plin', 'var(--plin)'], grijanje: ['Grijanje', 'var(--grijanje)'], ceste: ['Promet', 'var(--muted)'] };
+const TYPE = { struja: ['Struja', 'var(--power)'], voda: ['Voda', 'var(--water)'], plin: ['Plin', 'var(--gas)'], grijanje: ['Grijanje', 'var(--heat)'], ceste: ['Promet', 'var(--orange)'] };
 const REGIONS = { zagreb: 'Grad Zagreb / Zagrebačka', zabok: 'Krapinsko-zagorska', varazdin: 'Varaždinska', cakovec: 'Međimurska', koprivnica: 'Koprivničko-križevačka', bjelovar: 'Bjelovarsko-bilogorska', virovitica: 'Virovitičko-podravska', pozega: 'Požeško-slavonska', sbrod: 'Brodsko-posavska', osijek: 'Osječko-baranjska', vinkovci: 'Vukovarsko-srijemska', sisak: 'Sisačko-moslavačka', karlovac: 'Karlovačka', rijeka: 'Primorsko-goranska', gospic: 'Ličko-senjska', pula: 'Istarska', zadar: 'Zadarska', sibenik: 'Šibensko-kninska', split: 'Splitsko-dalmatinska', dubrovnik: 'Dubrovačko-neretvanska' };
 
 let addresses = LS.get('nr.addresses', []);
+let justAdded = null;
 let picked = null;
 let deferredInstall = null;
 let sw = null;
@@ -27,6 +28,49 @@ async function api(path, body) {
 const uid = () => Math.random().toString(36).slice(2, 10);
 const b64 = (s) => Uint8Array.from(atob(s.replace(/-/g, '+').replace(/_/g, '/').padEnd(Math.ceil(s.length / 4) * 4, '=')), (c) => c.charCodeAt(0));
 
+
+/* ---------- animacije i obavijest ---------- */
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let toastTimer;
+function toast(text) {
+  const t = $('toast'); $('toast-text').textContent = text; t.hidden = false;
+  t.classList.remove('show'); void t.offsetWidth; t.classList.add('show');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, 3200);
+}
+const BIT_COLORS = ['#ff6a13', '#ffd21a', '#1f7fd6', '#e23b2e', '#c63a8d', '#5b3d2a', '#8fd3f5'];
+function burst(x, y) {
+  if (reduced) return;
+  for (let i = 0; i < 14; i++) {
+    const b = document.createElement('i');
+    b.className = 'bit ' + ['sq', 'ci', 'tri'][i % 3];
+    const a = Math.random() * Math.PI * 2, d = 40 + Math.random() * 70;
+    b.style.setProperty('--dx', `${Math.cos(a) * d}px`);
+    b.style.setProperty('--dy', `${Math.sin(a) * d + 34}px`);
+    b.style.setProperty('--rot', `${(Math.random() - .5) * 720}deg`);
+    b.style.setProperty('--s', `${6 + Math.random() * 8}px`);
+    b.style.setProperty('--bc', BIT_COLORS[(Math.random() * BIT_COLORS.length) | 0]);
+    b.style.left = `${x}px`; b.style.top = `${y}px`;
+    document.body.append(b); setTimeout(() => b.remove(), 800);
+  }
+}
+let busyTimer;
+function digFaster() {
+  const sc = $('scene'); sc.classList.add('busy');
+  clearTimeout(busyTimer); busyTimer = setTimeout(() => sc.classList.remove('busy'), 2400);
+}
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('.btn');
+  if (!b || b.disabled) return;
+  const r = b.getBoundingClientRect();
+  const x = e.detail === 0 ? r.left + r.width / 2 : e.clientX, y = e.detail === 0 ? r.top + r.height / 2 : e.clientY;
+  burst(x, y); digFaster();
+  if (!reduced) {
+    const rip = document.createElement('span'); rip.className = 'rip'; rip.style.left = `${x - r.left}px`; rip.style.top = `${y - r.top}px`;
+    b.append(rip); setTimeout(() => rip.remove(), 600);
+    b.querySelector('.bell')?.classList.add('ring'); setTimeout(() => b.querySelector('.bell')?.classList.remove('ring'), 800);
+  }
+}, true);
+
 /* ---------- status obavijesti ---------- */
 async function currentSub() {
   if (!sw) return null;
@@ -34,8 +78,8 @@ async function currentSub() {
 }
 
 async function refreshStatus() {
-  const pill = $('status'), on = $('push-on'), test = $('push-test'), help = $('push-help');
-  const set = (cls, text) => { pill.className = `pill ${cls}`; pill.textContent = text; };
+  const pill = $('status'), on = $('push-on'), onText = $('push-on-text'), test = $('push-test'), help = $('push-help');
+  const set = (cls, text) => { pill.className = `pill ${cls}`; $('status-text').textContent = text; };
   test.hidden = true; on.disabled = false;
   if (isIOS() && !isStandalone()) {
     set('install', 'Treba instalirati'); on.disabled = true;
@@ -50,10 +94,10 @@ async function refreshStatus() {
   }
   const sub = await currentSub();
   if (sub && Notification.permission === 'granted') {
-    set('on', 'Uključeno'); on.textContent = 'Obavijesti su uključene'; on.disabled = true; test.hidden = false;
+    set('on', 'Uključeno'); onText.textContent = 'Obavijesti su uključene'; on.disabled = true; test.hidden = false;
     help.textContent = 'Obavijest stiže i kad je aplikacija zatvorena.';
   } else {
-    set('off', 'Isključeno'); on.textContent = 'Uključi obavijesti'; help.textContent = 'Obavijest stiže i kad je aplikacija zatvorena.';
+    set('off', 'Isključeno'); onText.textContent = 'Uključi obavijesti'; help.textContent = 'Obavijest stiže i kad je aplikacija zatvorena.';
   }
 }
 
@@ -71,7 +115,7 @@ async function enablePush() {
     let sub = await currentSub();
     if (!sub) sub = await sw.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(vapidPublicKey) });
     await syncSubscription(sub);
-    msg('Uključeno. Pošalji probnu obavijest da provjeriš.');
+    msg('Uključeno. Pošalji probnu obavijest da provjeriš.'); toast('Obavijesti su uključene');
   } catch (e) { msg(e.message || 'Nije uspjelo uključiti obavijesti.', true); }
   await refreshStatus();
 }
@@ -88,7 +132,7 @@ async function sendTest() {
     const sub = await currentSub();
     if (!sub) throw new Error('Obavijesti nisu uključene.');
     await api('/api/test-push', { subscription: sub.toJSON() });
-    msg('Probna obavijest poslana – trebala bi stići za nekoliko sekundi.');
+    msg('Probna obavijest poslana, trebala bi stići za nekoliko sekundi.'); toast('Probna obavijest je poslana');
   } catch (e) { msg(e.message, true); await refreshStatus(); }
 }
 
@@ -97,7 +141,7 @@ function renderAddresses() {
   const ul = $('addr-list'); ul.replaceChildren();
   $('addr-empty').hidden = addresses.length > 0;
   for (const a of addresses) {
-    const li = document.createElement('li');
+    const li = document.createElement('li'); if (a.id === justAdded) li.className = 'drop';
     const box = document.createElement('div');
     const t = document.createElement('div'); t.className = 't'; t.textContent = a.label;
     const s = document.createElement('div'); s.className = 's'; s.textContent = `${a.street}${a.number ? ' ' + a.number : ''}, ${a.city}`;
@@ -157,9 +201,9 @@ function addAddress(ev) {
   if (a.street.length < 2 || a.city.length < 2) return showError('Upiši grad i ulicu.');
   if (!a.region) return showError('Za ovu adresu ne možemo odrediti područje. Upiši je ručno i odaberi županiju.');
   a.id = uid(); a.label = $('label').value.trim() || (addresses.length ? `Adresa ${addresses.length + 1}` : 'Dom');
-  addresses.push(a); LS.set('nr.addresses', addresses);
+  addresses.push(a); justAdded = a.id; LS.set('nr.addresses', addresses);
   $('q').value = ''; $('label').value = ''; picked = null; $('sugg').hidden = true;
-  renderAddresses(); syncSubscription().catch(() => {}); loadAnnouncements();
+  renderAddresses(); toast('Adresa spremljena'); syncSubscription().catch(() => {}); loadAnnouncements();
 }
 
 /* ---------- najave ---------- */
@@ -175,7 +219,10 @@ function renderAnnouncements(items, offline) {
   for (const r of items) {
     const a = r.ann, [name, color] = TYPE[a.type] ?? ['Radovi', 'var(--muted)'];
     const li = document.createElement('li'); li.style.setProperty('--c', color);
-    const type = document.createElement('div'); type.className = 'type'; type.textContent = `${name} · ${a.source}`;
+    const head = document.createElement('div'); head.className = 'head';
+    const type = document.createElement('span'); type.className = 'type'; type.textContent = name;
+    const from = document.createElement('span'); from.className = 'from'; from.textContent = a.source; head.append(type, from);
+    if (a.type === 'struja' || a.type === 'voda') type.style.color = '#fff';
     const when = document.createElement('div'); when.className = 'when';
     const s = new Date(a.start), e = new Date(a.end);
     when.textContent = a.allDay ? `${fmtDay.format(s)}, cijeli dan` : `${fmtDay.format(s)}, ${fmtTime.format(s)} – ${fmtTime.format(e)}`;
@@ -183,8 +230,8 @@ function renderAnnouncements(items, offline) {
     const adr = addresses[r.addressIndex];
     where.textContent = `${a.streets}${a.place ? ' (' + a.place + ')' : ''}`;
     const mine = document.createElement('div'); mine.className = 'small muted'; mine.textContent = adr ? `Za adresu: ${adr.label}` : '';
-    li.append(type, when, where, mine);
-    if (r.quality !== 'exact') { const c = document.createElement('span'); c.className = 'check'; c.textContent = 'U tvojoj ulici – provjeri broj'; li.append(c); }
+    li.append(head, when, where, mine);
+    if (r.quality !== 'exact') { const c = document.createElement('span'); c.className = 'check'; c.textContent = 'U tvojoj ulici, provjeri broj'; li.append(c); }
     if (/^https:\/\//.test(a.url)) { const p = document.createElement('div'); const l = document.createElement('a'); l.href = a.url; l.rel = 'noopener noreferrer'; l.target = '_blank'; l.textContent = 'Izvorna objava'; p.append(l); li.append(p); }
     ul.append(li);
   }
@@ -215,7 +262,7 @@ async function wipe() {
   try { await sub?.unsubscribe(); } catch { /* */ }
   addresses = []; LS.del('nr.addresses'); LS.del('nr.last');
   renderAddresses(); renderAnnouncements([], false); await refreshStatus();
-  msg('Svi podaci su obrisani.');
+  msg('Svi podaci su obrisani.'); toast('Podaci su obrisani');
 }
 
 async function init() {

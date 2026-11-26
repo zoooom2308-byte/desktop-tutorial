@@ -1,5 +1,5 @@
-const CACHE = 'najava-v1';
-const SHELL = ['/', '/style.css', '/app.js', '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png'];
+const CACHE = 'najava-v2';
+const SHELL = ['/', '/style.css', '/app.js', '/manifest.webmanifest', '/icons/icon.svg', '/icons/icon-192.png', '/bg-pebbles.svg', '/fonts/barlow-condensed-latin-800-normal.woff2', '/fonts/barlow-latin-500-normal.woff2'];
 
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => {
