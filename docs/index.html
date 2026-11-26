@@ -6,7 +6,7 @@
   <title>Najava radova</title>
   <meta name="description" content="Upiši adresu jednom i dobij obavijest kad su u tvojoj ulici najavljeni radovi na struji, vodi, plinu ili grijanju.">
   <meta name="theme-color" content="#6ec3e8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://dqfukfvhatuiaziviloc.supabase.co https://nominatim.openstreetmap.org; manifest-src 'self'; worker-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://dqfukfvhatuiaziviloc.supabase.co https://nominatim.openstreetmap.org https://overpass-api.de; manifest-src 'self'; worker-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
   <meta name="referrer" content="no-referrer">
   <script src="config.js"></script>
   <link rel="manifest" href="manifest.webmanifest">
@@ -142,35 +142,47 @@
       </section>
 
       <section class="board b-water" aria-labelledby="h-addr">
-        <h3 id="h-addr" class="tab">Gdje stanuješ</h3>
+        <h3 id="h-addr" class="tab">Gdje želiš obavijesti</h3>
+        <p class="muted">Odaberi grad ili mjesto u Hrvatskoj, pa dijelove grada koji te zanimaju. Možeš dodati više gradova.</p>
         <ul id="addr-list" class="addr-list"></ul>
-        <p id="addr-empty" class="muted">Još nema adresa. Dodaj dom, posao ili roditelje (do 5).</p>
+        <p id="addr-empty" class="muted">Još nisi dodao ni jedan grad. Upiši ga ispod.</p>
 
-        <form id="addr-form" autocomplete="off" novalidate>
-          <div class="grid">
-            <label class="f-street">Ulica i kućni broj
-              <input id="q" type="text" inputmode="text" maxlength="100" placeholder="npr. Ilica 12, Zagreb" aria-autocomplete="list" aria-controls="sugg" aria-expanded="false" role="combobox">
-            </label>
-            <label class="f-label">Naziv
-              <input id="label" type="text" maxlength="40" placeholder="Dom">
-            </label>
-          </div>
-          <ul id="sugg" class="sugg" role="listbox" hidden></ul>
-          <p id="geo-note" class="muted small" hidden></p>
-          <div id="manual" class="grid" hidden>
-            <label>Grad <input id="m-city" type="text" maxlength="60"></label>
-            <label>Ulica <input id="m-street" type="text" maxlength="80"></label>
-            <label>Br. <input id="m-number" type="text" maxlength="6" inputmode="numeric"></label>
-            <label>Županija
-              <select id="m-region"><option value="">Odaberi</option></select>
-            </label>
-          </div>
-          <p id="form-error" class="error" role="alert" hidden></p>
-          <div class="row">
-            <button class="btn orange" type="submit">Dodaj adresu</button>
-            <button class="link" type="button" id="manual-toggle">Upiši ručno</button>
-          </div>
+        <form id="city-form" autocomplete="off" novalidate>
+          <label>Grad ili mjesto
+            <input id="city-q" type="text" maxlength="60" placeholder="npr. Rijeka" role="combobox" aria-autocomplete="list" aria-controls="city-sugg" aria-expanded="false">
+          </label>
+          <ul id="city-sugg" class="sugg" role="listbox" hidden></ul>
+          <p id="city-note" class="muted small" hidden></p>
         </form>
+
+        <details class="exact" id="exact">
+          <summary>Radije upišem točnu adresu (neobavezno)</summary>
+          <form id="addr-form" autocomplete="off" novalidate>
+            <div class="grid">
+              <label class="f-street">Ulica i kućni broj
+                <input id="q" type="text" inputmode="text" maxlength="100" placeholder="npr. Ilica 12, Zagreb" aria-autocomplete="list" aria-controls="sugg" aria-expanded="false" role="combobox">
+              </label>
+              <label class="f-label">Naziv
+                <input id="label" type="text" maxlength="40" placeholder="Dom">
+              </label>
+            </div>
+            <ul id="sugg" class="sugg" role="listbox" hidden></ul>
+            <p id="geo-note" class="muted small" hidden></p>
+            <div id="manual" class="grid" hidden>
+              <label>Grad <input id="m-city" type="text" maxlength="60"></label>
+              <label>Ulica <input id="m-street" type="text" maxlength="80"></label>
+              <label>Br. <input id="m-number" type="text" maxlength="6" inputmode="numeric"></label>
+              <label>Županija
+                <select id="m-region"><option value="">Odaberi</option></select>
+              </label>
+            </div>
+            <p id="form-error" class="error" role="alert" hidden></p>
+            <div class="row">
+              <button class="btn orange" type="submit">Dodaj adresu</button>
+              <button class="link" type="button" id="manual-toggle">Upiši ručno</button>
+            </div>
+          </form>
+        </details>
       </section>
 
       <section class="board b-power" aria-labelledby="h-push">

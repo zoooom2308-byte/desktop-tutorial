@@ -109,7 +109,7 @@ function msg(text, bad = false) {
 
 async function enablePush() {
   msg('');
-  if (!addresses.length) { msg('Najprije dodaj barem jednu adresu.', true); return; }
+  if (!addresses.length) { msg('Najprije dodaj barem jedan grad.', true); return; }
   try {
     const perm = await Notification.requestPermission();
     if (perm !== 'granted') { await refreshStatus(); msg('Dozvola nije dana.', true); return; }
@@ -175,28 +175,179 @@ async function geocode(q) {
   return { results };
 }
 
-/* ---------- adrese ---------- */
+/* ---------- gradovi i dijelovi grada (glavni izbor) ---------- */
+const MAX_ENTRIES = 12;
+const openIds = new Set();   // gradovi s otvorenim izborom dijelova
+const pickIds = new Set();   // gradovi gdje korisnik bira dijelove (nije "cijeli grad")
+const partsCache = new Map();
+let persistTimer;
+function persist() {
+  LS.set('nr.addresses', addresses);
+  clearTimeout(persistTimer);
+  persistTimer = setTimeout(async () => { await syncSubscription().catch(() => {}); loadAnnouncements(); }, 800);
+}
+async function removeEntry(a) {
+  addresses = addresses.filter((x) => x.id !== a.id); LS.set('nr.addresses', addresses); renderAddresses();
+  const sub = await currentSub();
+  if (addresses.length) { await syncSubscription(sub).catch(() => {}); } else if (sub) { await api('/unsubscribe', { endpoint: sub.endpoint }).catch(() => {}); await sub.unsubscribe().catch(() => {}); }
+  await refreshStatus(); loadAnnouncements();
+}
+
+const cleanPart = (n) => String(n).replace(/^(Gradska četvrt|Mjesni odbor|Četvrt|Kvart|Naselje|MO)\s+/i, '').replace(/\s+/g, ' ').trim();
+async function overpassParts(osm) {
+  if (osm?.type !== 'relation') return [];
+  const q = `[out:json][timeout:20];area(id:${3600000000 + Number(osm.id)})->.a;(nwr[place~"^(suburb|quarter|neighbourhood|village|hamlet)$"][name](area.a);rel[boundary=administrative][admin_level~"^(9|10)$"][name](area.a););out tags 600;`;
+  const res = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body: 'data=' + encodeURIComponent(q), signal: AbortSignal.timeout(25000) });
+  if (!res.ok) throw new Error(String(res.status));
+  const names = (await res.json()).elements.map((e) => cleanPart(e.tags?.['name:hr'] || e.tags?.name || '')).filter((n) => n.length > 1 && n.length <= 50);
+  return [...new Set(names)];
+}
+async function loadParts(a) {
+  const key = `${a.region}|${a.city}`;
+  if (partsCache.has(key)) return partsCache.get(key);
+  const cached = LS.get('nr.parts.' + key, null);
+  if (cached && Date.now() - cached.at < 7 * 864e5) { partsCache.set(key, cached.v); return cached.v; }
+  const [osmParts, places] = await Promise.all([
+    overpassParts(a.osm).catch(() => []),
+    api(`/places?region=${encodeURIComponent(a.region)}`).then((d) => d.places.map(cleanPart)).catch(() => []),
+  ]);
+  const lc = new Set(osmParts.map((n) => n.toLowerCase()));
+  const v = { main: osmParts.sort((x, y) => x.localeCompare(y, 'hr')), extra: [...new Set(places)].filter((n) => !lc.has(n.toLowerCase()) && n.toLowerCase() !== a.city.toLowerCase()) };
+  partsCache.set(key, v); LS.set('nr.parts.' + key, { at: Date.now(), v });
+  return v;
+}
+
+function buildPartsPanel(a) {
+  const box = document.createElement('div'); box.className = 'parts'; box.hidden = !openIds.has(a.id);
+  const whole = document.createElement('label'); whole.className = 'chk';
+  const wi = document.createElement('input'); wi.type = 'checkbox'; wi.checked = !pickIds.has(a.id) && a.parts.length === 0;
+  const wt = document.createElement('span'); wt.textContent = 'Cijeli grad'; whole.append(wi, wt);
+  const pick = document.createElement('div'); pick.hidden = wi.checked;
+  const filter = document.createElement('input'); filter.type = 'text'; filter.placeholder = 'Traži dio grada'; filter.maxLength = 40; filter.setAttribute('aria-label', 'Traži dio grada');
+  const status = document.createElement('p'); status.className = 'muted small'; status.textContent = 'Učitavam dijelove grada…';
+  const chips = document.createElement('div'); chips.className = 'chips';
+  const manualRow = document.createElement('div'); manualRow.className = 'row';
+  const mi = document.createElement('input'); mi.type = 'text'; mi.maxLength = 60; mi.placeholder = 'Upiši dio grada ručno'; mi.setAttribute('aria-label', 'Upiši dio grada ručno');
+  const mb = document.createElement('button'); mb.type = 'button'; mb.className = 'btn sky'; mb.textContent = 'Dodaj dio';
+  manualRow.append(mi, mb);
+  pick.append(filter, status, chips, manualRow);
+  const loose = document.createElement('label'); loose.className = 'chk';
+  const li = document.createElement('input'); li.type = 'checkbox'; li.checked = !a.strict;
+  const lt = document.createElement('span'); lt.textContent = 'Javi i kad izvor ne navodi dio grada'; loose.append(li, lt);
+  const hint = document.createElement('p'); hint.className = 'muted small'; hint.textContent = 'Neki izvori navode samo grad, ne i dio grada. Tada je bolje dobiti obavijest viška nego propustiti radove.';
+  box.append(whole, pick, loose, hint);
+
+  let list = { main: [], extra: [] };
+  const drawChips = () => {
+    chips.replaceChildren();
+    const q = filter.value.trim().toLowerCase();
+    const all = [...new Set([...a.parts, ...list.main, ...list.extra])];
+    for (const name of all) {
+      if (q && !name.toLowerCase().includes(q) && !a.parts.includes(name)) continue;
+      const c = document.createElement('label'); c.className = 'chip';
+      const ci = document.createElement('input'); ci.type = 'checkbox'; ci.checked = a.parts.includes(name);
+      ci.addEventListener('change', () => { a.parts = ci.checked ? [...a.parts, name].slice(0, 40) : a.parts.filter((x) => x !== name); persist(); renderSummary(); drawChips(); });
+      const sp = document.createElement('span'); sp.textContent = name; c.append(ci, sp); chips.append(c);
+    }
+    if (!chips.children.length) status.textContent = q ? 'Nema takvog dijela. Možeš ga dodati ručno.' : 'Nema popisa dijelova za ovo mjesto. Upiši dio ručno ili ostavi cijeli grad.';
+    else status.textContent = `Označi dijelove koji te zanimaju (${a.parts.length} odabrano).`;
+  };
+  const renderSummary = () => { const s = box.parentElement?.querySelector('.s'); if (s) s.textContent = summaryOf(a); };
+  loadParts(a).then((v) => { list = v; drawChips(); }).catch(() => { status.textContent = 'Popis dijelova trenutno nije dostupan. Upiši dio ručno.'; });
+  filter.addEventListener('input', drawChips);
+  wi.addEventListener('change', () => {
+    if (wi.checked) { pickIds.delete(a.id); a.parts = []; } else pickIds.add(a.id);
+    pick.hidden = wi.checked; persist(); renderSummary(); drawChips();
+  });
+  li.addEventListener('change', () => { a.strict = !li.checked; persist(); });
+  const addManual = () => { const n = cleanPart(mi.value); if (n.length < 2) return; if (!a.parts.includes(n)) a.parts = [...a.parts, n].slice(0, 40); mi.value = ''; persist(); renderSummary(); drawChips(); };
+  mb.addEventListener('click', addManual);
+  mi.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); addManual(); } });
+  return box;
+}
+const summaryOf = (a) => (a.parts.length ? a.parts.join(', ') : 'Cijeli grad');
+
+async function searchCities(q) {
+  const key = 'nr.city.' + q.toLowerCase();
+  const hit = LS.get(key, null);
+  if (hit && Date.now() - hit.at < 7 * 864e5) return { results: hit.results };
+  const wait = lastGeo + 1100 - Date.now();
+  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+  lastGeo = Date.now();
+  const url = new URL('https://nominatim.openstreetmap.org/search');
+  url.search = new URLSearchParams({ q, format: 'jsonv2', addressdetails: '1', countrycodes: 'hr', featuretype: 'settlement', limit: '8', 'accept-language': 'hr' });
+  let data;
+  try { const res = await fetch(url); if (!res.ok) throw new Error(String(res.status)); data = await res.json(); } catch { return { results: [], unavailable: true }; }
+  const seen = new Set();
+  const results = data.map((r) => {
+    const a = r.address ?? {};
+    const city = r.name || a.city || a.town || a.village || a.municipality || '';
+    const region = regionFromAddress({ ...a, city });
+    return { city, region, county: (a.county || a.state || '').replace(/\s*županija$/i, ' županija'), osm: { type: r.osm_type, id: r.osm_id } };
+  }).filter((r) => r.city && r.region && !seen.has(r.city + r.region) && seen.add(r.city + r.region));
+  LS.set(key, { at: Date.now(), results });
+  return { results };
+}
+
+let cityTimer, citySeq = 0;
+function onCityType() {
+  clearTimeout(cityTimer);
+  const q = $('city-q').value.trim(), box = $('city-sugg'), note = $('city-note');
+  box.hidden = true; box.replaceChildren(); $('city-q').setAttribute('aria-expanded', 'false'); note.hidden = true;
+  if (q.length < 2) return;
+  cityTimer = setTimeout(async () => {
+    const seq = ++citySeq;
+    const data = await searchCities(q);
+    if (seq !== citySeq) return;
+    if (data.unavailable) { note.hidden = false; note.textContent = 'Pretraživanje mjesta trenutno nije dostupno. Pokušaj za minutu.'; return; }
+    if (!data.results.length) { note.hidden = false; note.textContent = 'Nismo našli to mjesto u Hrvatskoj. Provjeri pisanje.'; return; }
+    for (const r of data.results) {
+      const li = document.createElement('li'); li.setAttribute('role', 'option'); li.textContent = r.county ? `${r.city}, ${r.county}` : r.city;
+      li.addEventListener('click', () => addCity(r));
+      box.append(li);
+    }
+    box.hidden = false; $('city-q').setAttribute('aria-expanded', 'true');
+  }, 600);
+}
+function addCity(r) {
+  $('city-sugg').hidden = true; $('city-q').value = '';
+  if (addresses.length >= MAX_ENTRIES) return toast('Najviše 12 gradova i adresa');
+  const dup = addresses.find((x) => x.kind === 'area' && x.region === r.region && x.city.toLowerCase() === r.city.toLowerCase());
+  if (dup) { openIds.add(dup.id); renderAddresses(); return toast(`${r.city} je već dodan`); }
+  const a = { id: uid(), kind: 'area', label: r.city, city: r.city, region: r.region, parts: [], strict: false, osm: r.osm };
+  addresses.push(a); justAdded = a.id; openIds.add(a.id); LS.set('nr.addresses', addresses);
+  renderAddresses(); toast(`${r.city} je dodan`); syncSubscription().catch(() => {}); loadAnnouncements();
+}
+
 function renderAddresses() {
   const ul = $('addr-list'); ul.replaceChildren();
   $('addr-empty').hidden = addresses.length > 0;
   for (const a of addresses) {
-    const li = document.createElement('li'); if (a.id === justAdded) li.className = 'drop';
+    const li = document.createElement('li'); li.className = (a.kind === 'area' ? 'city-li ' : '') + (a.id === justAdded ? 'drop' : '');
+    const top = document.createElement('div'); top.className = 'top';
     const box = document.createElement('div');
-    const t = document.createElement('div'); t.className = 't'; t.textContent = a.label;
-    const s = document.createElement('div'); s.className = 's'; s.textContent = `${a.street}${a.number ? ' ' + a.number : ''}, ${a.city}`;
+    const t = document.createElement('div'); t.className = 't'; t.textContent = a.kind === 'area' ? a.city : a.label;
+    const s = document.createElement('div'); s.className = 's';
+    s.textContent = a.kind === 'area' ? summaryOf(a) : `${a.street}${a.number ? ' ' + a.number : ''}, ${a.city}`;
     box.append(t, s);
+    const acts = document.createElement('div'); acts.className = 'acts';
+    let panel = null;
+    if (a.kind === 'area') {
+      const ed = document.createElement('button'); ed.className = 'link'; ed.type = 'button'; ed.textContent = 'Dijelovi grada';
+      ed.setAttribute('aria-label', `Odaberi dijelove grada ${a.city}`);
+      ed.addEventListener('click', () => { if (openIds.has(a.id)) openIds.delete(a.id); else openIds.add(a.id); panel.hidden = !openIds.has(a.id); });
+      acts.append(ed);
+    }
     const rm = document.createElement('button'); rm.className = 'link'; rm.type = 'button'; rm.textContent = 'Ukloni';
-    rm.setAttribute('aria-label', `Ukloni adresu ${a.label}`);
-    rm.addEventListener('click', async () => {
-      addresses = addresses.filter((x) => x.id !== a.id); LS.set('nr.addresses', addresses); renderAddresses();
-      const sub = await currentSub();
-      if (addresses.length) { await syncSubscription(sub).catch(() => {}); } else if (sub) { await api('/unsubscribe', { endpoint: sub.endpoint }).catch(() => {}); await sub.unsubscribe().catch(() => {}); }
-      await refreshStatus(); loadAnnouncements();
-    });
-    li.append(box, rm); ul.append(li);
+    rm.setAttribute('aria-label', `Ukloni ${a.kind === 'area' ? a.city : 'adresu ' + a.label}`);
+    rm.addEventListener('click', () => removeEntry(a));
+    acts.append(rm); top.append(box, acts); li.append(top);
+    if (a.kind === 'area') { panel = buildPartsPanel(a); li.append(panel); }
+    ul.append(li);
   }
 }
 
+/* ---------- točna adresa (neobavezno) ---------- */
 function showError(text) { const e = $('form-error'); e.hidden = !text; e.textContent = text || ''; }
 
 let geoTimer, geoSeq = 0;
@@ -229,7 +380,7 @@ function onType() {
 
 function addAddress(ev) {
   ev.preventDefault(); showError('');
-  if (addresses.length >= 5) return showError('Najviše 5 adresa.');
+  if (addresses.length >= MAX_ENTRIES) return showError('Najviše 12 gradova i adresa.');
   let a;
   if (!$('manual').hidden) {
     const region = $('m-region').value;
@@ -255,7 +406,7 @@ const fmtTime = new Intl.DateTimeFormat('hr-HR', { timeZone: 'Europe/Zagreb', ho
 function renderAnnouncements(items, offline) {
   const ul = $('ann-list'); ul.replaceChildren();
   const st = $('ann-state');
-  if (!addresses.length) { st.textContent = 'Dodaj adresu da vidiš najave.'; return; }
+  if (!addresses.length) { st.textContent = 'Dodaj grad da vidiš najave.'; return; }
   st.textContent = items.length ? `${offline ? 'Nema interneta – prikazane su zadnje poznate najave. ' : ''}Aktualne i nadolazeće najave za tvoje adrese:` : `${offline ? 'Nema interneta. ' : ''}Za tvoje adrese trenutno nema najava.`;
   for (const r of items) {
     const a = r.ann, [name, color] = TYPE[a.type] ?? ['Radovi', 'var(--muted)'];
@@ -272,7 +423,7 @@ function renderAnnouncements(items, offline) {
     where.textContent = `${a.streets.replace(/^\s*-\s*/gm, '').replace(/\n+/g, '; ').replace(/^naselja:\s*/i, 'Područje: ')}${a.place ? ' (' + a.place.replace(/\.$/, '') + ')' : ''}`;
     const mine = document.createElement('div'); mine.className = 'small muted'; mine.textContent = adr ? `Za adresu: ${adr.label}` : '';
     li.append(head, when, where, mine);
-    if (r.quality !== 'exact') { const c = document.createElement('span'); c.className = 'check'; c.textContent = r.quality === 'area' ? 'U tvom naselju, provjeri ulicu' : 'U tvojoj ulici, provjeri broj'; li.append(c); }
+    if (r.quality !== 'exact') { const c = document.createElement('span'); c.className = 'check'; c.textContent = { area: 'U tvom naselju, provjeri ulicu', city: 'U tvom gradu, provjeri ulicu' }[r.quality] ?? 'U tvojoj ulici, provjeri broj'; li.append(c); }
     if (/^https:\/\//.test(a.url)) { const p = document.createElement('div'); const l = document.createElement('a'); l.href = a.url; l.rel = 'noopener noreferrer'; l.target = '_blank'; l.textContent = 'Izvorna objava'; p.append(l); li.append(p); }
     ul.append(li);
   }
@@ -311,6 +462,8 @@ async function init() {
   const sel = $('m-region');
   for (const [k, v] of Object.entries(REGIONS)) { const o = document.createElement('option'); o.value = k; o.textContent = v; sel.append(o); }
   $('q').addEventListener('input', onType);
+  $('city-q').addEventListener('input', onCityType);
+  $('city-form').addEventListener('submit', (e) => e.preventDefault());
   $('addr-form').addEventListener('submit', addAddress);
   $('manual-toggle').addEventListener('click', () => { const m = $('manual'); m.hidden = !m.hidden; $('manual-toggle').textContent = m.hidden ? 'Upiši ručno' : 'Vrati pretraživanje'; });
   $('push-on').addEventListener('click', enablePush);
