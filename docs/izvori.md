@@ -1,12 +1,17 @@
 # Izvori podataka (provjereno 26.11.2026.)
 
-| Izvor | Format | Ažuriranje | robots.txt / uvjeti | Status |
-|---|---|---|---|---|
-| **HEP ODS – Bez struje** (`hep.hr/ods/bez-struje/19?dp=…&el=…&datum=…`), 20 distribucijskih područja | Server-renderirani HTML, po danu i terenskoj jedinici; ulice s rasponima ("JABLANOVEČKA 40, 47-57 nep") | tijekom dana, najave 1–6 dana unaprijed | robots.txt: `Disallow:` (sve dopušteno) | **Pouzdano, automatski (cijela Hrvatska)** |
-| **ViO Zagreb** – tablica "Aktualne obavijesti" + članci | HTML tablica (datum, ulica, naselje, vrijeme, status) i članci s popisom ulica | tijekom dana | nema robots.txt (404) | **Pouzdano, automatski (Zagreb)** |
-| **Gradska plinara Zagreb** – obavijesti | HTML članak ("ZONA OBUHVATA RADOVA"); točno vrijeme je u .doc privitku | povremeno | nema robots.txt (404) | **Djelomično** (datum i ulica da, sat ne – cijeli dan) |
-| **HEP Toplinarstvo** | Nema strukturiranog popisa; obavijesti su vijesti/PDF, projekt vrelovoda je završen | – | – | **Preskočeno** (nepouzdano čitanje) |
-| **Zagreb – regulacija prometa** (zagreb.hr) | Nije pronađen strukturirani izvor; robots.txt 404 | – | – | **Preskočeno** |
-| **Vodovodi Split, Rijeka, Osijek; ostali plinski distributeri** | Nisu istraženi | – | – | **Nije pokriveno** |
+Sve se čita automatski, pristojno: opisni User-Agent bez osobnih podataka, razmak ≥700 ms, ETag/If-Modified-Since, cache 20–45 min, najviše 24 zahtjeva i 22 s po pokretanju (Netlify scheduled function svakih 15 min), i to samo za regije u kojima postoje korisnici.
 
-Dohvaćanje: svakih 30 min (Netlify Scheduled Function), samo za regije u kojima postoje korisnici, najviše 30 zahtjeva po pokretanju, razmak ≥700 ms, ETag/If-Modified-Since, cache 45 min, User-Agent `NajavaRadova/1.0 (…)` bez osobnih podataka.
+| Izvor | Pokriva | Format | robots.txt | Status |
+|---|---|---|---|---|
+| **HEP ODS – Bez struje** (`hep.hr/ods/bez-struje/19`) | struja, **cijela Hrvatska** (20 područja, sve terenske jedinice) | HTML po danu i jedinici; slobodan tekst ulica i raspona (formati se razlikuju po elektri) | sve dopušteno | **Pouzdano** |
+| **Grad Rijeka – RCC info** (`info.rijekacitycard.hr/hr/get-notices`) | voda, struja, plin, grijanje, regulacija prometa za Rijeku, Kastav, Viškovo, Jelenje i okolicu | **JSON** (JLS, naselje, ulica, k.br.) | nema robots.txt (404) | **Pouzdano** |
+| **ViO Zagreb** | voda, Zagreb | HTML tablica + članci s popisom ulica | nema robots.txt (404) | **Pouzdano** |
+| **ViK Split** | voda, Split, Kaštela, Solin, Trogir… | HTML članci po području (ne po ulici) | priložen predložak bez zabrana | **Djelomično** (područje, ne ulica) |
+| **Gradska plinara Zagreb** | plin, Zagreb | HTML; točan sat je u .doc privitku | nema robots.txt (404) | **Djelomično** (cijeli dan) |
+
+## Nije pokriveno (reci to vlasniku)
+- **HEP Toplinarstvo**: nema strukturiranog popisa (samo vijesti); gdje postoji, grijanje dolazi preko Rijeke (RCC).
+- **Vodovodi Osijek, Zadar, Pula, Varaždin i ostali**: stranice se otvaraju, ali nisu napisani čitači (Osijek se ne može dohvatiti).
+- **Plin izvan Zagreba** i **radovi na cestama izvan Rijeke** (HAK/HAC, gradski prometni centri): nisu povezani; na autocestama nema adresa, pa nisu ni cilj aplikacije.
+- Uvjete korištenja nisam pronašao ni za jedan izvor; osim robots.txt-a HEP-a nema izričitih zabrana.

@@ -64,3 +64,64 @@ test('parseStreetList razdvaja ulice i raspone', () => {
 });
 
 test('najmanje 30 primjera usporedbe', () => assert.ok(CASES.length >= 30));
+
+// ---- stvarni zapisi iz primorja i otoka (HEP ODS, Elektroprimorje Rijeka, 26.–27.11.2026.)
+const rij = (streets, place = 'RIJEKA') => ({ source: 'hep-ods', region: 'rijeka', place, streets });
+const ra = (street, number = '', city = 'Rijeka', extra = {}) => ({ street, number, city, places: [], region: 'rijeka', ...extra });
+const RIJEKA_CASES = [
+  ['Rijeka: natuknice s crticom, br. i parni', rij('- Portić br. 1, 2, 3, 4, 5, 8 - 26 (parni brojevi)\n- Istarska br. BB'), ra('Portić', '12'), 'exact'],
+  ['Rijeka: pojedinačni broj s popisa', rij('- Portić br. 1, 2, 3, 4, 5, 8 - 26 (parni brojevi)\n- Istarska br. BB'), ra('Portić', '3'), 'exact'],
+  ['Rijeka: neparni broj unutar parnog raspona ne pogađa', rij('- Portić br. 1, 2, 3, 4, 5, 8 - 26 (parni brojevi)\n- Istarska br. BB'), ra('Portić', '9'), null],
+  ['Rijeka: druga natuknica (BB = bez broja)', rij('- Portić br. 1, 2, 3, 4, 5, 8 - 26 (parni brojevi)\n- Istarska br. BB'), ra('Istarska', '7'), 'exact'],
+  ['Rijeka: Petra Jurčića 24A (sufiks)', rij('- Petra Jurčića br. 24, 24A\n- Bože Vidasa br. 7 (neboder), 14\n- Ivana Lenca br. 2 - 12 (parni brojevi)'), ra('Petra Jurčića', '24'), 'exact'],
+  ['Rijeka: Ivana Lenca parni raspon', rij('- Petra Jurčića br. 24, 24A\n- Bože Vidasa br. 7 (neboder), 14\n- Ivana Lenca br. 2 - 12 (parni brojevi)'), ra('Ivana Lenca', '8'), 'exact'],
+  ['Rijeka: Ivana Lenca neparni ne pogađa', rij('- Petra Jurčića br. 24, 24A\n- Bože Vidasa br. 7 (neboder), 14\n- Ivana Lenca br. 2 - 12 (parni brojevi)'), ra('Ivana Lenca', '9'), null],
+  ['Rijeka: Braće Bačić neparni + pojedinačni', rij('- Braće Bačić br. 1 - 13 (neparni brojevi), 6, 8, 10, 14'), ra('Braće Bačić', '10'), 'exact'],
+  ['Rijeka: Braće Bačić 12 ne pogađa', rij('- Braće Bačić br. 1 - 13 (neparni brojevi), 6, 8, 10, 14'), ra('Braće Bačić', '12'), null],
+  ['Rijeka: ista ulica, drugi grad (Lovran)', rij('šetalište Maršala Tita br. 19 - 27A (neparni brojevi), 31, 39, 46', 'LOVRAN'), ra('Šetalište Maršala Tita', '21', 'Rijeka'), null],
+  ['Lovran: šetalište Maršala Tita 21', rij('šetalište Maršala Tita br. 19 - 27A (neparni brojevi), 31, 39, 46', 'LOVRAN'), ra('Šetalište Maršala Tita', '21', 'Lovran'), 'exact'],
+  ['Lovran: 39 s popisa pojedinačnih', rij('šetalište Maršala Tita br. 19 - 27A (neparni brojevi), 31, 39, 46', 'LOVRAN'), ra('Šetalište Maršala Tita', '39', 'Lovran'), 'exact'],
+  ['Lovran: 33 nije na popisu', rij('šetalište Maršala Tita br. 19 - 27A (neparni brojevi), 31, 39, 46', 'LOVRAN'), ra('Šetalište Maršala Tita', '33', 'Lovran'), null],
+  ['Cres: popis naselja (Sv.Petar)', rij('naselja: Sv.Petar,Pojane,Ivanje', 'CRES'), ra('Glavna', '3', 'Sveti Petar', { places: ['Sveti Petar'] }), 'area'],
+  ['Cres: naselje koje nije na popisu', rij('naselja: Sv.Petar,Pojane,Ivanje', 'CRES'), ra('Glavna', '3', 'Cres'), null],
+  ['Naselja samo u polju mjesta (Vodice)', rij('.', 'Vodice,Predošćica.'), ra('Vodice 12', '', 'Vodice'), 'area'],
+  ['Čabar: par. od kbr. 2-8, nep. od kbr. 1', rij('TRG KRALJA TOMISLAVA, ŽRTAVA FAŠIZMA, NARODNOG OSLOBOĐENJA,PETRA ZRINSKOG, TROPETI , IVANA GORANA KOVAČIĆA par. od kbr. 2-8 i nep. od kbr. 1', 'ČABAR'), ra('Ivana Gorana Kovačića', '4', 'Čabar'), 'exact'],
+  ['Čabar: cijela ulica bez brojeva', rij('TRG KRALJA TOMISLAVA, ŽRTAVA FAŠIZMA, NARODNOG OSLOBOĐENJA,PETRA ZRINSKOG, TROPETI , IVANA GORANA KOVAČIĆA par. od kbr. 2-8 i nep. od kbr. 1', 'ČABAR'), ra('Petra Zrinskog', '5', 'Čabar'), 'exact'],
+  ['Čabar: nep. bez gornje granice = nesigurno', rij('IVANA GORANA KOVAČIĆA par. od kbr. 2-8 i nep. od kbr. 1', 'ČABAR'), ra('Ivana Gorana Kovačića', '9', 'Čabar'), 'street'],
+  ['Mali Lošinj: od broja 3 do 19', rij('Bože Milanovića od broja 3 do 19 i od broja 2-18,Benzinska postaja INA Zagazinjine,Veloselska br.18 i 20 i Osorska br 1.', 'Mali Lošinj.'), ra('Bože Milanovića', '15', 'Mali Lošinj'), 'exact'],
+  ['Mali Lošinj: Veloselska 20 (i 20)', rij('Bože Milanovića od broja 3 do 19 i od broja 2-18,Benzinska postaja INA Zagazinjine,Veloselska br.18 i 20 i Osorska br 1.', 'Mali Lošinj.'), ra('Veloselska', '20', 'Mali Lošinj'), 'exact'],
+  ['Mali Lošinj: Osorska 1 nakon "i"', rij('Bože Milanovića od broja 3 do 19 i od broja 2-18,Benzinska postaja INA Zagazinjine,Veloselska br.18 i 20 i Osorska br 1.', 'Mali Lošinj.'), ra('Osorska', '1', 'Mali Lošinj'), 'exact'],
+  ['Mali Lošinj: Osorska 5 ne pogađa', rij('Bože Milanovića od broja 3 do 19 i od broja 2-18,Benzinska postaja INA Zagazinjine,Veloselska br.18 i 20 i Osorska br 1.', 'Mali Lošinj.'), ra('Osorska', '5', 'Mali Lošinj'), null],
+  ['Zagreb s naslovom naselja (Bijela Gorica:)', { region: 'zagreb', place: 'BIJELA GORICA, MARIJA GORICA, OPLAZNIK', streets: 'BIJELA GORICA:\nBREGOVITA ULICA 1-20 obje, ULICA ANTE KOVAČIĆA 1-7 nep,\nMARIJA GORICA:\nGORIČKA ULICA 12-14 par' }, addr('Goričke', '12', 'Marija Gorica', { places: ['Marija Gorica'] }), 'exact'],
+  ['Zagreb: sufiksi 2/A i 1/D', hep('KOLEDOVČINA 2/A-8 par, 1/D, SLAVONSKA AVENIJA 26/1'), addr('Slavonska avenija', '26'), 'exact'],
+  ['Dugo Selo: više mjesta u polju mjesta', { region: 'zagreb', place: 'MARTIN BRIJEG ,DUGO SELO', streets: 'DOMOBRANSKA 88-130 , 77-105 , JAREK 1-17' }, addr('Domobranska', '90', 'Dugo Selo'), 'exact'],
+];
+for (const [name, ann, a, expected] of RIJEKA_CASES) {
+  test(`usporedba (HR): ${name}`, () => assert.equal(matchAnnouncement(ann, a), expected));
+}
+
+// ---- ostali stvarni formati (Osijek, Zadar, Pula, Split)
+const reg = (region, place, streets) => ({ source: 'hep-ods', region, place, streets });
+const FMT = [
+  ['Split/Gata: "od br.:" pa neparni/parni rasponi', reg('split', 'Gata', 'Poljička cesta od br.:\nneparni 47 - 73\nparni 38 - 42'), ra('Poljička cesta', '51', 'Gata', { region: 'split' }), 'exact'],
+  ['Split/Gata: parni raspon', reg('split', 'Gata', 'Poljička cesta od br.:\nneparni 47 - 73\nparni 38 - 42'), ra('Poljička cesta', '40', 'Gata', { region: 'split' }), 'exact'],
+  ['Split/Gata: izvan raspona', reg('split', 'Gata', 'Poljička cesta od br.:\nneparni 47 - 73\nparni 38 - 42'), ra('Poljička cesta', '44', 'Gata', { region: 'split' }), null],
+  ['Pula: kbr.51,51A,52 i kbr.53', reg('pula', 'Viškovići(Koromačno)', 'Viškovići kbr.51,51A,52 i kbr.53'), ra('Viškovići', '53', 'Viškovići', { region: 'pula' }), 'exact'],
+  ['Pula: k.b. 17.', reg('pula', 'Rovinj', 'Ulica Driovier, k.b. 17.'), ra('Driovier', '17', 'Rovinj', { region: 'pula' }), 'exact'],
+  ['Pula: k.b. 17 – drugi broj', reg('pula', 'Rovinj', 'Ulica Driovier, k.b. 17.'), ra('Driovier', '19', 'Rovinj', { region: 'pula' }), null],
+  ['Split: "Od broja 213 - 313" bez ulice → naselje', reg('split', 'Vinjani Donji.', 'Od broja 213 - 313.'), ra('Glavna', '250', 'Vinjani Donji', { region: 'split' }), 'area'],
+  ['Zadar: nejasan naziv (naselje ili ulica?) ne šalje obavijest svima u mjestu – poznato ograničenje', reg('zadar', 'Vir', 'Miljkovica XIV'), ra('Obala', '5', 'Vir', { region: 'zadar' }), null],
+  ['Zadar: grad s jednom "ulicom" ne daje obavijest cijelom gradu', reg('zadar', 'Zadar', 'Celestine Medovića'), ra('Voštarnica', '5', 'Zadar', { region: 'zadar' }), null],
+  ['Zadar: ulice u mjestu (Sukošan)', reg('zadar', 'Sukošan', 'Put Jankovca,Put Dijanovih'), ra('Put Jankovca', '3', 'Sukošan', { region: 'zadar' }), 'exact'],
+  ['Osijek: ulica s rasponima u naselju Našice', reg('osijek', 'KEŠINCI', 'BALKANSKA 1-35/A, I. L. RIBARA 6-100, 1-91 nep'), ra('Balkanska', '17', 'Kešinci', { region: 'osijek' }), 'exact'],
+  ['Osijek: 1-91 nep ne pogađa paran', reg('osijek', 'KEŠINCI', 'BALKANSKA 1-35/A, I. L. RIBARA 6-100, 1-91 nep'), ra('I. L. Ribara', '103', 'Kešinci', { region: 'osijek' }), null],
+  ['Osijek: cijela naselja pred popisom', reg('osijek', 'GRADAC NAŠIČKI, LONDŽICA, ZOLJAN, NAŠICE', 'GRADAC NAŠIČKI, LONDŽICA, ZOLJAN; CIJELA NASELJA , NAŠICE: GAJIĆ 6-76 par, 1-79 nep'), ra('Glavna', '3', 'Londžica', { region: 'osijek' }), 'area'],
+  ['Osijek: ulica u Našicama', reg('osijek', 'GRADAC NAŠIČKI, LONDŽICA, ZOLJAN, NAŠICE', 'GRADAC NAŠIČKI, LONDŽICA, ZOLJAN; CIJELA NASELJA , NAŠICE: GAJIĆ 6-76 par, 1-79 nep'), ra('Gajić', '21', 'Našice', { region: 'osijek' }), 'exact'],
+];
+for (const [name, ann, a, expected] of FMT) test(`usporedba (HR): ${name}`, () => assert.equal(matchAnnouncement(ann, a), expected));
+
+test('stvarni lažni pogodak: "Centar" u Pinezićima (Krk) ne pogađa adresu u Rijeci', () => {
+  const ann = { region: 'rijeka', place: 'PINEZIĆI', streets: 'Pava Žužića, Za dolci, Torkul, Krč, Lokvić, Centar, Trg Borisa Mršića, Njivine, Stari put' };
+  assert.equal(matchAnnouncement(ann, { street: 'Ružićeva', number: '3', city: 'Rijeka', places: ['Centar', 'Rijeka'], region: 'rijeka' }), null);
+  assert.equal(matchAnnouncement(ann, { street: 'Njivine', number: '3', city: 'Pinezići', places: [], region: 'rijeka' }), 'exact');
+});

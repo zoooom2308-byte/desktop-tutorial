@@ -3,7 +3,7 @@ import { memoryStore } from '../lib/store.js';
 import { syncSources, loadActiveAnnouncements } from '../lib/sync.js';
 const store = memoryStore();
 await store.setJSON('demand/zagreb', { at: new Date().toISOString() });
-const r = await syncSources(store, { maxRequests: 60 });
+const r = await syncSources(store, { maxRequests: 60, maxMs: 120000 });
 console.log(JSON.stringify(r));
 const a = await loadActiveAnnouncements(store, new Date(Date.now() - 86400_000));
 const by = {}; for (const x of a) by[x.source] = (by[x.source] ?? 0) + 1;

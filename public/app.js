@@ -161,6 +161,8 @@ function renderAddresses() {
 function showError(text) { const e = $('form-error'); e.hidden = !text; e.textContent = text || ''; }
 
 let geoTimer, geoSeq = 0;
+// Kućni broj koji je korisnik upisao (Nominatim ga često ne vrati): npr. "Portić 12, Rijeka" -> "12"
+const typedNumber = (v) => (String(v).split(',')[0].match(/(?:^|\s)(\d{1,4}\s?[a-zA-Z]?)(?=\s|$)/)?.[1] ?? '').replace(/\s/g, '');
 function onType() {
   picked = null; showError('');
   clearTimeout(geoTimer);
@@ -178,7 +180,7 @@ function onType() {
       note.textContent = data.unavailable || data.busy ? 'Provjera adrese trenutno nije dostupna. Možeš je upisati ručno.' : '';
       for (const r of data.results) {
         const li = document.createElement('li'); li.setAttribute('role', 'option'); li.textContent = r.label;
-        li.addEventListener('click', () => { picked = r; $('q').value = r.label; box.hidden = true; $('q').setAttribute('aria-expanded', 'false'); });
+        li.addEventListener('click', () => { picked = { ...r, number: r.number || typedNumber($('q').value) }; $('q').value = picked.number && !/\d/.test(r.label) ? r.label.replace(/^([^,]+)/, `$1 ${picked.number}`) : r.label; box.hidden = true; $('q').setAttribute('aria-expanded', 'false'); });
         box.append(li);
       }
       box.hidden = !data.results.length; $('q').setAttribute('aria-expanded', String(!!data.results.length));
@@ -196,7 +198,7 @@ function addAddress(ev) {
     if (!region) return showError('Odaberi županiju.');
   } else if (picked) {
     a = { street: picked.street, number: picked.number, city: picked.city, places: picked.places || [], region: picked.region };
-    if (!a.number) { const m = $('q').value.match(/\b(\d{1,4}\s?[a-zA-Z]?)\b/); if (m) a.number = m[1].replace(/\s/g, ''); }
+    if (!a.number) a.number = typedNumber($('q').value);
   } else return showError('Odaberi adresu iz prijedloga ili je upiši ručno.');
   if (a.street.length < 2 || a.city.length < 2) return showError('Upiši grad i ulicu.');
   if (!a.region) return showError('Za ovu adresu ne možemo odrediti područje. Upiši je ručno i odaberi županiju.');
@@ -228,10 +230,10 @@ function renderAnnouncements(items, offline) {
     when.textContent = a.allDay ? `${fmtDay.format(s)}, cijeli dan` : `${fmtDay.format(s)}, ${fmtTime.format(s)} – ${fmtTime.format(e)}`;
     const where = document.createElement('div'); where.className = 'where';
     const adr = addresses[r.addressIndex];
-    where.textContent = `${a.streets}${a.place ? ' (' + a.place + ')' : ''}`;
+    where.textContent = `${a.streets.replace(/^\s*-\s*/gm, '').replace(/\n+/g, '; ').replace(/^naselja:\s*/i, 'Područje: ')}${a.place ? ' (' + a.place.replace(/\.$/, '') + ')' : ''}`;
     const mine = document.createElement('div'); mine.className = 'small muted'; mine.textContent = adr ? `Za adresu: ${adr.label}` : '';
     li.append(head, when, where, mine);
-    if (r.quality !== 'exact') { const c = document.createElement('span'); c.className = 'check'; c.textContent = 'U tvojoj ulici, provjeri broj'; li.append(c); }
+    if (r.quality !== 'exact') { const c = document.createElement('span'); c.className = 'check'; c.textContent = r.quality === 'area' ? 'U tvom naselju, provjeri ulicu' : 'U tvojoj ulici, provjeri broj'; li.append(c); }
     if (/^https:\/\//.test(a.url)) { const p = document.createElement('div'); const l = document.createElement('a'); l.href = a.url; l.rel = 'noopener noreferrer'; l.target = '_blank'; l.textContent = 'Izvorna objava'; p.append(l); li.append(p); }
     ul.append(li);
   }

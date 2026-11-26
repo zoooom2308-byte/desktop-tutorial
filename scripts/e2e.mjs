@@ -32,7 +32,7 @@ ok(await page.evaluate(async () => !!(await navigator.serviceWorker.getRegistrat
 
 // 2) stvarne najave (živi izvori) -> odaberi adresu u ulici koja SADA ima najavu
 await store.setJSON('demand/zagreb', { at: new Date().toISOString() });
-const sync = await syncSources(store, { maxRequests: 60 });
+const sync = await syncSources(store, { maxRequests: 60, maxMs: 120000 });
 out('sync:', JSON.stringify(sync));
 const anns = await loadActiveAnnouncements(store, new Date());
 const target = anns.find((a) => a.source === 'hep-ods' && a.place.trim().toUpperCase() === 'ZAGREB' && parseStreetList(a.streets).some((s) => s.ranges?.length && s.ranges[0].parity !== 'none'));
