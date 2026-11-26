@@ -1,0 +1,16 @@
+{
+  "name": "najava-radova",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "PWA koja javlja Web Push obavijest kad su u tvojoj ulici najavljeni radovi.",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "build": "node scripts/build.mjs"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^8.1.0",
+    "@netlify/functions": "^2.8.2",
+    "web-push": "^3.6.7"
+  }
+}

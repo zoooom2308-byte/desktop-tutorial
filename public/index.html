@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="hr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Najava radova</title>
+  <meta name="description" content="Upiši adresu jednom i dobij obavijest kad su u tvojoj ulici najavljeni radovi na struji, vodi, plinu ili grijanju.">
+  <meta name="theme-color" content="#17181b">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Najava radova">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header class="top">
+    <div class="tape" aria-hidden="true"></div>
+    <div class="wrap bar">
+      <h1><span class="mark" aria-hidden="true"></span>Najava radova</h1>
+      <span id="status" class="pill" role="status" aria-live="polite">…</span>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <h2>Znaj dan prije da u tvojoj ulici nema struje, vode ili plina.</h2>
+      <p>Upiši adresu jednom. Kad netko najavi radove, stiže ti obavijest – čim se pojavi, večer prije u 19:00 i sat vremena prije početka.</p>
+    </section>
+
+    <section id="install-card" class="card" hidden>
+      <h3>Instaliraj aplikaciju</h3>
+      <p id="install-text">Dodaj Najavu radova na početni zaslon da radi kao prava aplikacija.</p>
+      <button id="install-btn" class="btn" hidden>Instaliraj</button>
+      <ol id="ios-steps" class="steps" hidden>
+        <li>U Safariju dodirni <strong>Dijeli</strong> (kvadrat sa strelicom).</li>
+        <li>Odaberi <strong>Dodaj na početni zaslon</strong>.</li>
+        <li>Otvori aplikaciju s početnog zaslona i ovdje uključi obavijesti. <em>Bez ovoga obavijesti na iPhoneu ne rade.</em></li>
+      </ol>
+    </section>
+
+    <section class="card" aria-labelledby="h-addr">
+      <h3 id="h-addr">1 · Tvoje adrese</h3>
+      <ul id="addr-list" class="addr-list"></ul>
+      <p id="addr-empty" class="muted">Još nema adresa. Dodaj dom, posao ili roditelje (do 5).</p>
+
+      <form id="addr-form" autocomplete="off" novalidate>
+        <div class="grid">
+          <label class="f-street">Ulica i kućni broj
+            <input id="q" type="text" inputmode="text" maxlength="100" placeholder="npr. Ilica 12, Zagreb" aria-autocomplete="list" aria-controls="sugg" aria-expanded="false" role="combobox">
+          </label>
+          <label class="f-label">Naziv
+            <input id="label" type="text" maxlength="40" placeholder="Dom">
+          </label>
+        </div>
+        <ul id="sugg" class="sugg" role="listbox" hidden></ul>
+        <p id="geo-note" class="muted small" hidden></p>
+        <div id="manual" class="grid" hidden>
+          <label>Grad <input id="m-city" type="text" maxlength="60"></label>
+          <label>Ulica <input id="m-street" type="text" maxlength="80"></label>
+          <label>Br. <input id="m-number" type="text" maxlength="6" inputmode="numeric"></label>
+          <label>Županija
+            <select id="m-region"><option value="">Odaberi</option></select>
+          </label>
+        </div>
+        <p id="form-error" class="error" role="alert" hidden></p>
+        <div class="row">
+          <button class="btn" type="submit">Dodaj adresu</button>
+          <button class="link" type="button" id="manual-toggle">Upiši ručno</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card" aria-labelledby="h-push">
+      <h3 id="h-push">2 · Obavijesti</h3>
+      <p id="push-help" class="muted">Obavijest stiže i kad je aplikacija zatvorena.</p>
+      <div class="row">
+        <button id="push-on" class="btn">Uključi obavijesti</button>
+        <button id="push-test" class="btn ghost" hidden>Pošalji probnu obavijest</button>
+      </div>
+      <p id="push-msg" class="small" role="status" hidden></p>
+    </section>
+
+    <section id="najave" class="card" aria-labelledby="h-ann">
+      <h3 id="h-ann">3 · Najave za tvoje adrese</h3>
+      <p id="ann-state" class="muted small"></p>
+      <ul id="ann-list" class="ann-list"></ul>
+    </section>
+  </main>
+
+  <footer class="wrap foot">
+    <p>Spremamo samo tvoje adrese i pretplatu na obavijesti. Bez računa, lokacije, imena i praćenja. Podaci o radovima dolaze od HEP ODS-a, ViO-a i Gradske plinare Zagreb; uvijek provjeri izvornu objavu.</p>
+    <button id="wipe" class="link danger">Obriši moje podatke</button>
+    <p class="small muted">Pokriveno: struja (HEP ODS, sva područja), voda i plin (Zagreb). Grijanje i prometne obavijesti trenutno nisu pokriveni.</p>
+  </footer>
+
+  <script type="module" src="/app.js"></script>
+</body>
+</html>
