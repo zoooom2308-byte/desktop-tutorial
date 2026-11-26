@@ -15,14 +15,16 @@ const server = http.createServer((req, res) => {
   if (!p.startsWith(root) || !fs.existsSync(p) || fs.statSync(p).isDirectory()) { res.writeHead(404); return res.end('404'); }
   res.writeHead(200, { 'content-type': TYPES[path.extname(p)] ?? 'application/octet-stream' }); fs.createReadStream(p).pipe(res);
 }).listen(8894, '127.0.0.1');
-const BASE = 'http://127.0.0.1:8894' + PREFIX;
+const LIVE = process.env.LIVE_URL;
+const BASE = LIVE || ('http://127.0.0.1:8894' + PREFIX);
+const ORIGIN = LIVE ? new URL(LIVE).origin : 'http://127.0.0.1:8894';
 const ctx = await chromium.launchPersistentContext(fs.mkdtempSync('/tmp/claude-0/pw-'), { headless: false, args: ['--no-sandbox'], viewport: { width: 1000, height: 900 } });
-await ctx.grantPermissions(['notifications'], { origin: 'http://127.0.0.1:8894' });
+await ctx.grantPermissions(['notifications'], { origin: ORIGIN });
 const page = await ctx.newPage(); const errs = []; page.on('pageerror', (e) => errs.push(e.message)); page.on('console', (m) => m.type() === 'error' && errs.push(m.text()));
 await page.goto(BASE); await page.waitForTimeout(1500);
 ok((await page.textContent('h1')).includes('Najava radova'), 'stranica se otvara pod podputanjom /desktop-tutorial/');
 ok(await page.evaluate(async () => !!(await navigator.serviceWorker.getRegistration())), 'service worker registriran (scope pod podputanjom)');
-const man = await (await ctx.request.get(BASE + 'manifest.webmanifest')).json();
+const man = await page.evaluate(async (u) => (await fetch(u)).json(), BASE + 'manifest.webmanifest');
 ok(man.start_url === './?src=pwa' && man.scope === './', 'manifest ima relativne putanje');
 // adresa u Rijeci kroz stvarne prijedloge
 await page.type('#q', 'Školjić 14, Rijeka', { delay: 40 });
@@ -42,7 +44,7 @@ ok((await page.textContent('#status')).includes('Uključeno'), 'push pretplata k
 await page.click('#push-test'); await page.waitForTimeout(6000);
 const tmsg = await page.textContent('#push-msg').catch(() => ''); console.log('probna obavijest ->', tmsg);
 ok(/poslana/i.test(tmsg), 'poslužitelj (Deno web-push) predao probnu obavijest FCM-u');
-await page.screenshot({ path: 'notes/screens/pages-desktop.png', fullPage: true });
+await page.screenshot({ path: LIVE ? 'notes/screens/live-desktop.png' : 'notes/screens/pages-desktop.png', fullPage: true });
 // offline
 await ctx.setOffline(true); await page.reload(); await page.waitForTimeout(1500);
 ok((await page.textContent('h1')).includes('Najava radova'), 'radi bez interneta pod podputanjom');

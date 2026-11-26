@@ -23,7 +23,7 @@ const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in win
 async function api(path, body) {
   const res = await fetch(API + path, body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : undefined);
   const data = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(data.error || 'Greška na serveru');
+  if (!res.ok) { const err = new Error(data.error || 'Greška na serveru'); err.data = data; throw err; }
   return data;
 }
 
@@ -135,7 +135,14 @@ async function sendTest() {
     if (!sub) throw new Error('Obavijesti nisu uključene.');
     await api('/test-push', { subscription: sub.toJSON() });
     msg('Probna obavijest poslana, trebala bi stići za nekoliko sekundi.'); toast('Probna obavijest je poslana');
-  } catch (e) { msg(e.message, true); await refreshStatus(); }
+  } catch (e) {
+    if (e.data?.gone) {
+      // Push servis kaže da je pretplata istekla: odjavi je lokalno pa korisnik može ponovno uključiti obavijesti
+      try { await (await currentSub())?.unsubscribe(); } catch { /* */ }
+      msg('Pretplata na obavijesti je istekla. Uključi obavijesti ponovno.', true);
+    } else msg(e.message, true);
+    await refreshStatus();
+  }
 }
 
 
