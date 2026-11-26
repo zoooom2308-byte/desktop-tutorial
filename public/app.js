@@ -1,4 +1,6 @@
 // Najava radova – klijent. Sav tekst iz izvora ispisuje se isključivo preko textContent.
+import { regionFromAddress } from './region.js';
+const API = (globalThis.NR_CONFIG?.api ?? '/api').replace(/\/$/, '');
 const $ = (id) => document.getElementById(id);
 const LS = {
   get(k, d) { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } },
@@ -19,7 +21,7 @@ const isIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.
 const pushSupported = () => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
 
 async function api(path, body) {
-  const res = await fetch(path, body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : undefined);
+  const res = await fetch(API + path, body ? { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) } : undefined);
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || 'Greška na serveru');
   return data;
@@ -111,7 +113,7 @@ async function enablePush() {
   try {
     const perm = await Notification.requestPermission();
     if (perm !== 'granted') { await refreshStatus(); msg('Dozvola nije dana.', true); return; }
-    const { vapidPublicKey } = await api('/api/config');
+    const { vapidPublicKey } = await api('/config');
     let sub = await currentSub();
     if (!sub) sub = await sw.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64(vapidPublicKey) });
     await syncSubscription(sub);
@@ -123,7 +125,7 @@ async function enablePush() {
 async function syncSubscription(sub) {
   sub ??= await currentSub();
   if (!sub || !addresses.length) return;
-  await api('/api/subscribe', { subscription: sub.toJSON(), addresses });
+  await api('/subscribe', { subscription: sub.toJSON(), addresses });
 }
 
 async function sendTest() {
@@ -131,9 +133,39 @@ async function sendTest() {
   try {
     const sub = await currentSub();
     if (!sub) throw new Error('Obavijesti nisu uključene.');
-    await api('/api/test-push', { subscription: sub.toJSON() });
+    await api('/test-push', { subscription: sub.toJSON() });
     msg('Probna obavijest poslana, trebala bi stići za nekoliko sekundi.'); toast('Probna obavijest je poslana');
   } catch (e) { msg(e.message, true); await refreshStatus(); }
+}
+
+
+/* ---------- geokodiranje: preglednik pita OpenStreetMap Nominatim izravno (najviše 1 upit u sekundi, s cacheom) ---------- */
+let lastGeo = 0;
+async function geocode(q) {
+  const key = 'nr.geo.' + q.toLowerCase();
+  const hit = LS.get(key, null);
+  if (hit && Date.now() - hit.at < 7 * 864e5) return { results: hit.results };
+  const wait = lastGeo + 1100 - Date.now();
+  if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+  lastGeo = Date.now();
+  const url = new URL('https://nominatim.openstreetmap.org/search');
+  url.search = new URLSearchParams({ q, format: 'jsonv2', addressdetails: '1', countrycodes: 'hr', limit: '6', 'accept-language': 'hr' });
+  let data;
+  try {
+    const res = await fetch(url);
+    if (!res.ok) throw new Error(String(res.status));
+    data = await res.json();
+  } catch { return { results: [], unavailable: true }; }
+  const seen = new Set();
+  const results = data.filter((r) => r.address?.road).map((r) => {
+    const a = r.address;
+    const city = (a.city || a.town || a.village || a.municipality || a.city_district || '').replace(/^Grad\s+/, '');
+    const places = [a.suburb, a.city_district, a.neighbourhood, a.quarter, a.village, a.town, a.hamlet].filter(Boolean);
+    return { street: a.road, number: a.house_number || '', city, places: [...new Set(places)], region: regionFromAddress({ ...a, city }), label: [a.road + (a.house_number ? ' ' + a.house_number : ''), city].filter(Boolean).join(', ') };
+  }).filter((r) => !seen.has(r.label + r.region) && seen.add(r.label + r.region));
+  // Lokacija (lat/lon) se namjerno ne sprema.
+  LS.set(key, { at: Date.now(), results });
+  return { results };
 }
 
 /* ---------- adrese ---------- */
@@ -151,7 +183,7 @@ function renderAddresses() {
     rm.addEventListener('click', async () => {
       addresses = addresses.filter((x) => x.id !== a.id); LS.set('nr.addresses', addresses); renderAddresses();
       const sub = await currentSub();
-      if (addresses.length) { await syncSubscription(sub).catch(() => {}); } else if (sub) { await api('/api/unsubscribe', { endpoint: sub.endpoint }).catch(() => {}); await sub.unsubscribe().catch(() => {}); }
+      if (addresses.length) { await syncSubscription(sub).catch(() => {}); } else if (sub) { await api('/unsubscribe', { endpoint: sub.endpoint }).catch(() => {}); await sub.unsubscribe().catch(() => {}); }
       await refreshStatus(); loadAnnouncements();
     });
     li.append(box, rm); ul.append(li);
@@ -173,7 +205,7 @@ function onType() {
   geoTimer = setTimeout(async () => {
     const seq = ++geoSeq;
     try {
-      const data = await api(`/api/geocode?q=${encodeURIComponent(q)}`);
+      const data = await geocode(q);
       if (seq !== geoSeq) return;
       const note = $('geo-note');
       note.hidden = !(data.unavailable || data.busy);
@@ -241,8 +273,9 @@ function renderAnnouncements(items, offline) {
 
 async function loadAnnouncements() {
   if (!addresses.length) return renderAnnouncements([], false);
+  $('ann-state').textContent = 'Tražim najave za tvoje adrese…';
   try {
-    const { results } = await api('/api/match', { addresses });
+    const { results } = await api('/match', { addresses });
     LS.set('nr.last', results); renderAnnouncements(results, false);
   } catch { renderAnnouncements(LS.get('nr.last', []), true); }
 }
@@ -260,7 +293,7 @@ function setupInstall() {
 async function wipe() {
   if (!confirm('Obrisati sve tvoje adrese i pretplatu na obavijesti s ovog uređaja i s našeg poslužitelja?')) return;
   const sub = await currentSub();
-  try { if (sub) await api('/api/unsubscribe', { endpoint: sub.endpoint }); } catch { /* server će ukloniti mrtvu pretplatu */ }
+  try { if (sub) await api('/unsubscribe', { endpoint: sub.endpoint }); } catch { /* server će ukloniti mrtvu pretplatu */ }
   try { await sub?.unsubscribe(); } catch { /* */ }
   addresses = []; LS.del('nr.addresses'); LS.del('nr.last');
   renderAddresses(); renderAnnouncements([], false); await refreshStatus();
@@ -278,7 +311,7 @@ async function init() {
   $('wipe').addEventListener('click', wipe);
   renderAddresses(); setupInstall(); loadAnnouncements();
   if ('serviceWorker' in navigator) {
-    try { sw = await navigator.serviceWorker.register('/sw.js'); await navigator.serviceWorker.ready; sw = await navigator.serviceWorker.ready; } catch { /* nema SW */ }
+    try { sw = await navigator.serviceWorker.register('sw.js'); await navigator.serviceWorker.ready; sw = await navigator.serviceWorker.ready; } catch { /* nema SW */ }
   }
   await refreshStatus();
   // ako se pretplata promijenila na pregledniku, uskladi je s poslužiteljem

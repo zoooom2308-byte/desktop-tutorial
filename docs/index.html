@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="hr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Najava radova</title>
+  <meta name="description" content="Upiši adresu jednom i dobij obavijest kad su u tvojoj ulici najavljeni radovi na struji, vodi, plinu ili grijanju.">
+  <meta name="theme-color" content="#6ec3e8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://dqfukfvhatuiaziviloc.supabase.co https://nominatim.openstreetmap.org; manifest-src 'self'; worker-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <script src="config.js"></script>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Najava radova">
+  <link rel="preload" href="fonts/barlow-condensed-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="pipes" aria-hidden="true"><i class="p-water"></i><i class="p-power"></i><i class="p-gas"></i><i class="p-heat"></i></div>
+
+  <header class="hero">
+    <span class="cloud c1" aria-hidden="true"></span><span class="cloud c2" aria-hidden="true"></span>
+    <div class="wrap hero-top">
+      <h1 class="brand">
+        <svg class="sign" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 2 38 20 20 38 2 20Z" fill="#ff6a13" stroke="#1b1b19" stroke-width="3" stroke-linejoin="round"/><rect x="18" y="10" width="4" height="13" rx="2" fill="#1b1b19"/><circle cx="20" cy="28" r="2.6" fill="#1b1b19"/></svg>
+        Najava radova
+      </h1>
+      <span id="status" class="pill" role="status" aria-live="polite"><i class="lamp" aria-hidden="true"></i><span id="status-text">…</span></span>
+    </div>
+    <div class="wrap hero-copy">
+      <h2>Kopaju ispred tvoje kuće? Saznaj to prije susjeda.</h2>
+      <p>Upiši adresu jednom. Kad HEP, ViO ili plinara najave radove u tvojoj ulici, javimo ti odmah, večer prije u 19:00 i sat prije početka. I kad je aplikacija zatvorena.</p>
+    </div>
+
+    <div class="scene" id="scene" aria-hidden="true">
+      <svg viewBox="0 0 1200 335" preserveAspectRatio="xMidYMax slice" focusable="false">
+        <defs>
+          <pattern id="win" width="12" height="14" patternUnits="userSpaceOnUse"><rect x="3" y="3" width="6" height="8" rx="1" fill="#d6eefa" opacity=".6"/></pattern>
+          <pattern id="hz" width="16" height="16" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="16" height="16" fill="#ffd21a"/><rect width="8" height="16" fill="#1b1b19"/></pattern>
+          <linearGradient id="soil" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5b3d2a"/><stop offset="1" stop-color="#6e4a33"/></linearGradient>
+        </defs>
+
+        <!-- zgrade u daljini -->
+        <g>
+          <rect x="40" y="50" width="80" height="75" fill="#6fa3c4"/><rect x="40" y="50" width="80" height="75" fill="url(#win)"/>
+          <rect x="130" y="70" width="60" height="55" fill="#86b4cf"/><rect x="130" y="70" width="60" height="55" fill="url(#win)"/>
+          <rect x="200" y="40" width="70" height="85" fill="#5d8fb0"/><rect x="200" y="40" width="70" height="85" fill="url(#win)"/>
+          <rect x="285" y="75" width="55" height="50" fill="#7fb0cc"/><rect x="285" y="75" width="55" height="50" fill="url(#win)"/>
+          <rect x="880" y="55" width="90" height="70" fill="#6fa3c4"/><rect x="880" y="55" width="90" height="70" fill="url(#win)"/>
+          <rect x="980" y="37" width="70" height="88" fill="#5d8fb0"/><rect x="980" y="37" width="70" height="88" fill="url(#win)"/>
+          <rect x="1060" y="73" width="90" height="52" fill="#86b4cf"/><rect x="1060" y="73" width="90" height="52" fill="url(#win)"/>
+          <rect x="1150" y="60" width="60" height="65" fill="#7fb0cc"/><rect x="1150" y="60" width="60" height="65" fill="url(#win)"/>
+        </g>
+
+        <!-- dizalica -->
+        <g>
+          <path d="M244 125V8M256 125V8M244 125 256 105 244 85 256 65 244 45 256 25" fill="none" stroke="#ffd21a" stroke-width="4" stroke-linejoin="round"/>
+          <path d="M150 18H335M150 18 250 4 335 18" fill="none" stroke="#ffd21a" stroke-width="5" stroke-linejoin="round"/>
+          <rect x="146" y="18" width="22" height="16" rx="2" fill="#1b1b19"/>
+          <g class="hook"><path d="M305 18V62" stroke="#1b1b19" stroke-width="2"/><rect x="298" y="62" width="14" height="10" rx="2" fill="#ff6a13" stroke="#1b1b19" stroke-width="2"/></g>
+        </g>
+
+        <!-- ulica u presjeku -->
+        <rect x="0" y="125" width="1200" height="4" fill="#3a3f48"/>
+        <rect x="0" y="129" width="1200" height="18" fill="#262a31"/>
+        <rect x="0" y="147" width="1200" height="12" fill="#8a8f96"/>
+        <rect x="0" y="159" width="1200" height="56" fill="#5b3d2a"/>
+        <rect x="0" y="215" width="1200" height="60" fill="#a9714a"/>
+        <rect x="0" y="275" width="1200" height="60" fill="#dcb77a"/>
+        <g fill="#8a6a50" opacity=".7"><ellipse cx="90" cy="232" rx="9" ry="6"/><ellipse cx="310" cy="250" rx="12" ry="7"/><ellipse cx="520" cy="236" rx="7" ry="5"/><ellipse cx="880" cy="258" rx="11" ry="7"/><ellipse cx="1080" cy="228" rx="8" ry="5"/><ellipse cx="170" cy="190" rx="6" ry="4"/><ellipse cx="640" cy="196" rx="7" ry="4"/><ellipse cx="1000" cy="180" rx="8" ry="5"/></g>
+        <g fill="#c99d5c" opacity=".8"><ellipse cx="60" cy="300" rx="10" ry="6"/><ellipse cx="420" cy="312" rx="13" ry="7"/><ellipse cx="760" cy="292" rx="8" ry="5"/><ellipse cx="1120" cy="305" rx="12" ry="7"/></g>
+
+        <!-- iskop -->
+        <rect x="690" y="125" width="110" height="92" fill="#2e2018"/>
+        <path d="M690 125v92M800 125v92" stroke="#7a5238" stroke-width="3"/>
+
+        <!-- cijevi -->
+        <g class="pipe water"><rect x="0" y="168" width="1200" height="14" rx="7" fill="#1f7fd6"/><line x1="0" y1="173" x2="1200" y2="173" stroke="#bfe3ff" stroke-width="3" stroke-dasharray="14 26" class="flow"/></g>
+        <g class="pipe power"><rect x="0" y="192" width="1200" height="10" rx="5" fill="#e23b2e"/><line x1="0" y1="197" x2="1200" y2="197" stroke="#ffd21a" stroke-width="3" stroke-dasharray="6 34" class="flow spark"/></g>
+        <g class="pipe gas"><rect x="0" y="238" width="1200" height="14" rx="7" fill="#f2b705"/><line x1="0" y1="245" x2="1200" y2="245" stroke="#1b1b19" stroke-width="14" stroke-dasharray="5 175" opacity=".55"/></g>
+        <g class="pipe heat"><rect x="0" y="298" width="1200" height="8" rx="4" fill="#c63a8d"/><rect x="0" y="313" width="1200" height="8" rx="4" fill="#c63a8d"/><line x1="0" y1="302" x2="1200" y2="302" stroke="#ffd2ec" stroke-width="2" stroke-dasharray="10 30" class="flow slow"/><line x1="0" y1="317" x2="1200" y2="317" stroke="#ffd2ec" stroke-width="2" stroke-dasharray="10 30" class="flow slow"/></g>
+
+        <!-- gomila zemlje, ograda, čunjevi -->
+        <path d="M800 125Q835 82 884 125Z" fill="#5b3d2a"/><g fill="#8a6a50"><circle cx="825" cy="112" r="3"/><circle cx="850" cy="116" r="2.5"/><circle cx="838" cy="104" r="2"/></g>
+        <g><rect x="898" y="96" width="62" height="14" fill="url(#hz)" stroke="#1b1b19" stroke-width="2"/><path d="M906 110v15M952 110v15" stroke="#1b1b19" stroke-width="3"/></g>
+        <g><path d="M984 125l7-30 7 30Z" fill="#ff6a13" stroke="#1b1b19" stroke-width="2" stroke-linejoin="round"/><rect x="987" y="108" width="8" height="5" fill="#fff"/><rect x="978" y="123" width="26" height="4" rx="1" fill="#1b1b19"/></g>
+        <g><path d="M1016 125l7-30 7 30Z" fill="#ff6a13" stroke="#1b1b19" stroke-width="2" stroke-linejoin="round"/><rect x="1019" y="108" width="8" height="5" fill="#fff"/><rect x="1010" y="123" width="26" height="4" rx="1" fill="#1b1b19"/></g>
+
+        <!-- radnik -->
+        <g>
+          <rect x="1068" y="95" width="6" height="30" fill="#2a3a5c"/><rect x="1077" y="95" width="6" height="30" fill="#2a3a5c"/>
+          <rect x="1066" y="68" width="18" height="30" rx="4" fill="#ffd21a" stroke="#1b1b19" stroke-width="2"/><rect x="1066" y="80" width="18" height="3" fill="#fff"/>
+          <circle cx="1075" cy="60" r="7" fill="#e8b48a"/><path d="M1066 59a9 9 0 0 1 18 0Z" fill="#fff" stroke="#1b1b19" stroke-width="2"/>
+          <g class="wave"><path d="M1084 74l12-16" stroke="#ffd21a" stroke-width="5" stroke-linecap="round"/><circle cx="1097" cy="57" r="3.4" fill="#e8b48a"/></g>
+        </g>
+
+        <!-- bager -->
+        <g class="excavator">
+          <rect x="415" y="99" width="160" height="26" rx="13" fill="#1d1f24"/>
+          <circle cx="432" cy="112" r="8" fill="#50555e"/><circle cx="432" cy="112" r="3" fill="#1d1f24"/><circle cx="558" cy="112" r="8" fill="#50555e"/><circle cx="558" cy="112" r="3" fill="#1d1f24"/><circle cx="495" cy="112" r="6" fill="#50555e"/>
+          <rect x="440" y="87" width="110" height="14" fill="#3a3f48"/>
+          <path d="M428 87V59Q428 53 434 53H546Q552 53 552 59V87Z" fill="#ff6a13" stroke="#1b1b19" stroke-width="2"/>
+          <rect x="416" y="59" width="18" height="30" rx="4" fill="#d9520a" stroke="#1b1b19" stroke-width="2"/>
+          <path d="M446 53V19Q446 15 450 15H492Q496 15 499 19L520 53Z" fill="#ff6a13" stroke="#1b1b19" stroke-width="2" stroke-linejoin="round"/>
+          <path d="M454 23H490L508 47H454Z" fill="#bfe7f7"/><path d="M460 26l10 0-10 18Z" fill="#fff" opacity=".6"/>
+          <rect x="436" y="41" width="6" height="14" fill="#1d1f24"/>
+          <g class="smoke"><circle cx="439" cy="34" r="4"/><circle cx="439" cy="34" r="4"/><circle cx="439" cy="34" r="4"/></g>
+          <circle cx="535" cy="67" r="7" fill="#3a3f48" stroke="#1b1b19" stroke-width="2"/>
+          <g class="boom">
+            <path d="M520 62L590 28" stroke="#8a8f96" stroke-width="6" stroke-linecap="round"/>
+            <path d="M535 67L625 20" stroke="#ff6a13" stroke-width="17" stroke-linecap="round"/><path d="M535 67L625 20" stroke="#1b1b19" stroke-width="2" opacity=".35" transform="translate(0 -6)"/>
+            <g class="stick">
+              <path d="M640 14L690 78" stroke="#8a8f96" stroke-width="6" stroke-linecap="round"/>
+              <path d="M625 20L705 115" stroke="#ff8a3d" stroke-width="14" stroke-linecap="round"/>
+              <circle cx="625" cy="20" r="7" fill="#3a3f48" stroke="#1b1b19" stroke-width="2"/>
+              <g class="bucket">
+                <path d="M700 108L722 150Q732 166 752 168L748 146Q742 126 726 112Z" fill="#3a3f48" stroke="#1b1b19" stroke-width="2.5" stroke-linejoin="round"/>
+                <path d="M752 168l7 1-6-7ZM744 164l7 5-8-1Z" fill="#c9ccd1"/>
+                <circle cx="705" cy="115" r="6" fill="#ffd21a" stroke="#1b1b19" stroke-width="2"/>
+              </g>
+            </g>
+          </g>
+          <g class="dust"><circle cx="745" cy="160" r="6"/><circle cx="745" cy="160" r="5"/><circle cx="745" cy="160" r="7"/></g>
+        </g>
+      </svg>
+    </div>
+  </header>
+
+  <div class="under">
+    <main class="wrap">
+      <section id="install-card" class="board install" hidden>
+        <h3 class="tab">Instaliraj aplikaciju</h3>
+        <p id="install-text">Dodaj Najavu radova na početni zaslon da radi kao prava aplikacija.</p>
+        <button id="install-btn" class="btn orange" hidden>Instaliraj</button>
+        <ol id="ios-steps" class="steps" hidden>
+          <li>U Safariju dodirni <strong>Dijeli</strong> (kvadrat sa strelicom).</li>
+          <li>Odaberi <strong>Dodaj na početni zaslon</strong>.</li>
+          <li>Otvori aplikaciju s početnog zaslona i ovdje uključi obavijesti. Bez toga obavijesti na iPhoneu ne rade.</li>
+        </ol>
+      </section>
+
+      <section class="board b-water" aria-labelledby="h-addr">
+        <h3 id="h-addr" class="tab">Gdje stanuješ</h3>
+        <ul id="addr-list" class="addr-list"></ul>
+        <p id="addr-empty" class="muted">Još nema adresa. Dodaj dom, posao ili roditelje (do 5).</p>
+
+        <form id="addr-form" autocomplete="off" novalidate>
+          <div class="grid">
+            <label class="f-street">Ulica i kućni broj
+              <input id="q" type="text" inputmode="text" maxlength="100" placeholder="npr. Ilica 12, Zagreb" aria-autocomplete="list" aria-controls="sugg" aria-expanded="false" role="combobox">
+            </label>
+            <label class="f-label">Naziv
+              <input id="label" type="text" maxlength="40" placeholder="Dom">
+            </label>
+          </div>
+          <ul id="sugg" class="sugg" role="listbox" hidden></ul>
+          <p id="geo-note" class="muted small" hidden></p>
+          <div id="manual" class="grid" hidden>
+            <label>Grad <input id="m-city" type="text" maxlength="60"></label>
+            <label>Ulica <input id="m-street" type="text" maxlength="80"></label>
+            <label>Br. <input id="m-number" type="text" maxlength="6" inputmode="numeric"></label>
+            <label>Županija
+              <select id="m-region"><option value="">Odaberi</option></select>
+            </label>
+          </div>
+          <p id="form-error" class="error" role="alert" hidden></p>
+          <div class="row">
+            <button class="btn orange" type="submit">Dodaj adresu</button>
+            <button class="link" type="button" id="manual-toggle">Upiši ručno</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="board b-power" aria-labelledby="h-push">
+        <h3 id="h-push" class="tab">Kako da te javimo</h3>
+        <p id="push-help" class="muted">Obavijest stiže i kad je aplikacija zatvorena.</p>
+        <div class="row">
+          <button id="push-on" class="btn yellow"><svg class="ico bell" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0-6 6v4l-2 3h16l-2-3V9a6 6 0 0 0-6-6Z" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"/><path d="M10 19a2 2 0 0 0 4 0" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></svg><span id="push-on-text">Uključi obavijesti</span></button>
+          <button id="push-test" class="btn sky" hidden>Pošalji probnu obavijest</button>
+        </div>
+        <p id="push-msg" class="small" role="status" hidden></p>
+      </section>
+
+      <section id="najave" class="board b-gas" aria-labelledby="h-ann">
+        <h3 id="h-ann" class="tab">Što se kopa kod tebe</h3>
+        <p id="ann-state" class="muted small"></p>
+        <ul id="ann-list" class="ann-list"></ul>
+      </section>
+    </main>
+
+    <footer class="wrap foot">
+      <p>Spremamo samo tvoje adrese i pretplatu na obavijesti. Bez računa, lokacije, imena i praćenja. Podaci o radovima dolaze od HEP ODS-a, ViO-a i Gradske plinare Zagreb. Uvijek provjeri izvornu objavu.</p>
+      <button id="wipe" class="link danger">Obriši moje podatke</button>
+      <p class="small">Pokriveno: struja (HEP ODS, sva područja), voda i plin (Zagreb). Grijanje i prometne obavijesti trenutno nisu pokriveni.</p>
+    </footer>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 4 29 32H11Z" fill="#ff6a13" stroke="#1b1b19" stroke-width="2.5" stroke-linejoin="round"/><rect x="16" y="15" width="8" height="5" fill="#fff"/><rect x="6" y="31" width="28" height="5" rx="1.5" fill="#1b1b19"/></svg><span id="toast-text"></span></div>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

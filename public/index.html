@@ -6,13 +6,16 @@
   <title>Najava radova</title>
   <meta name="description" content="Upiši adresu jednom i dobij obavijest kad su u tvojoj ulici najavljeni radovi na struji, vodi, plinu ili grijanju.">
   <meta name="theme-color" content="#6ec3e8">
-  <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://dqfukfvhatuiaziviloc.supabase.co https://nominatim.openstreetmap.org; manifest-src 'self'; worker-src 'self'; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+  <script src="config.js"></script>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Najava radova">
-  <link rel="preload" href="/fonts/barlow-condensed-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/style.css">
+  <link rel="preload" href="fonts/barlow-condensed-latin-800-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <div class="pipes" aria-hidden="true"><i class="p-water"></i><i class="p-power"></i><i class="p-gas"></i><i class="p-heat"></i></div>
@@ -196,6 +199,6 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite" hidden><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 4 29 32H11Z" fill="#ff6a13" stroke="#1b1b19" stroke-width="2.5" stroke-linejoin="round"/><rect x="16" y="15" width="8" height="5" fill="#fff"/><rect x="6" y="31" width="28" height="5" rx="1.5" fill="#1b1b19"/></svg><span id="toast-text"></span></div>
 
-  <script type="module" src="/app.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>
