@@ -1,6 +1,6 @@
-const CACHE = 'najava-v3';
+const CACHE = 'najava-v4';
 const abs = (p) => new URL(p, self.registration.scope).href;
-const SHELL = ['./', 'style.css', 'app.js', 'region.js', 'text.js', 'config.js', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'bg-pebbles.svg', 'fonts/barlow-condensed-latin-800-normal.woff2', 'fonts/barlow-latin-500-normal.woff2'];
+const SHELL = ['./', 'style.css', 'app.js', 'region.js', 'text.js', 'parts.js', 'config.js', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'bg-pebbles.svg', 'fonts/barlow-condensed-latin-800-normal.woff2', 'fonts/barlow-latin-500-normal.woff2'];
 
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL.map(abs))).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => {

@@ -1,5 +1,6 @@
 // Najava radova – klijent. Sav tekst iz izvora ispisuje se isključivo preko textContent.
 import { regionFromAddress } from './region.js';
+import { staticParts } from './parts.js';
 const API = (globalThis.NR_CONFIG?.api ?? '/api').replace(/\/$/, '');
 const $ = (id) => document.getElementById(id);
 const LS = {
@@ -211,8 +212,10 @@ async function loadParts(a) {
     overpassParts(a.osm).catch(() => []),
     api(`/places?region=${encodeURIComponent(a.region)}`).then((d) => d.places.map(cleanPart)).catch(() => []),
   ]);
-  const lc = new Set(osmParts.map((n) => n.toLowerCase()));
-  const v = { main: osmParts.sort((x, y) => x.localeCompare(y, 'hr')), extra: [...new Set(places)].filter((n) => !lc.has(n.toLowerCase()) && n.toLowerCase() !== a.city.toLowerCase()) };
+  const known = staticParts(a.city);
+  const mainAll = [...new Set([...known, ...osmParts])];
+  const lc = new Set(mainAll.map((n) => n.toLowerCase()));
+  const v = { main: known.length ? mainAll : mainAll.sort((x, y) => x.localeCompare(y, 'hr')), extra: [...new Set(places)].filter((n) => !lc.has(n.toLowerCase()) && n.toLowerCase() !== a.city.toLowerCase()) };
   partsCache.set(key, v); LS.set('nr.parts.' + key, { at: Date.now(), v });
   return v;
 }
@@ -281,7 +284,7 @@ async function searchCities(q) {
   const seen = new Set();
   const results = data.map((r) => {
     const a = r.address ?? {};
-    const city = r.name || a.city || a.town || a.village || a.municipality || '';
+    const city = (r.name || a.city || a.town || a.village || a.municipality || '').replace(/^(Grad|Općina)\s+/i, '');
     const region = regionFromAddress({ ...a, city });
     return { city, region, county: (a.county || a.state || '').replace(/\s*županija$/i, ' županija'), osm: { type: r.osm_type, id: r.osm_id } };
   }).filter((r) => r.city && r.region && !seen.has(r.city + r.region) && seen.add(r.city + r.region));
