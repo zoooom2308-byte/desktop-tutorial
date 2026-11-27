@@ -2,6 +2,7 @@
 import { regionFromAddress } from './region.js';
 import { staticParts } from './parts.js';
 import { buildMapLinks } from './maps.js';
+import { openMap } from './mapview.js';
 const API = (globalThis.NR_CONFIG?.api ?? '/api').replace(/\/$/, '');
 const $ = (id) => document.getElementById(id);
 const LS = {
@@ -418,7 +419,7 @@ function addCity(r) {
   const dup = addresses.find((x) => x.kind === 'area' && x.region === r.region && x.city.toLowerCase() === r.city.toLowerCase());
   if (dup) { openIds.add(dup.id); renderAddresses(); return toast(`${r.city} je već dodan`); }
   const a = { id: uid(), kind: 'area', label: r.city, city: r.city, region: r.region, parts: [], strict: false, osm: r.osm };
-  addresses.push(a); justAdded = a.id; openIds.add(a.id); LS.set('nr.addresses', addresses);
+  addresses.push(a); justAdded = a.id; LS.set('nr.addresses', addresses);
   renderAddresses(); toast(`${r.city} je dodan`); syncSubscription().catch(() => {}); loadAnnouncements();
 }
 
@@ -506,14 +507,26 @@ const fmt = new Intl.DateTimeFormat('hr-HR', { timeZone: 'Europe/Zagreb', weekda
 const fmtDay = new Intl.DateTimeFormat('hr-HR', { timeZone: 'Europe/Zagreb', weekday: 'long', day: 'numeric', month: 'long' });
 const fmtTime = new Intl.DateTimeFormat('hr-HR', { timeZone: 'Europe/Zagreb', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 
+let currentItems = [];
+function showMap(focus) {
+  const seen = new Map();
+  for (const r of currentItems) if (!seen.has(r.ann.id)) seen.set(r.ann.id, r.ann);
+  const cities = [...new Set(addresses.filter((x) => x.kind === 'area').map((x) => x.city))];
+  const title = cities.length === 1 ? `Radovi: ${cities[0]}` : 'Radovi u tvojim gradovima';
+  openMap({ items: [...seen.values()], focusId: focus?.ann.id ?? null, title });
+}
+
 function renderAnnouncements(items, offline) {
+  currentItems = items;
+  { const b = $('ann-map-all'); b.hidden = !items.length; }
   const ul = $('ann-list'); ul.replaceChildren();
   const st = $('ann-state');
   if (!addresses.length) { st.textContent = 'Dodaj grad da vidiš najave.'; return; }
   st.textContent = items.length ? `${offline ? 'Nema interneta – prikazane su zadnje poznate najave. ' : ''}Aktualne i nadolazeće najave za tvoje adrese:` : `${offline ? 'Nema interneta. ' : ''}Za tvoje adrese trenutno nema najava.`;
   for (const r of items) {
     const a = r.ann, [name, color] = TYPE[a.type] ?? ['Radovi', 'var(--muted)'];
-    const li = document.createElement('li'); li.style.setProperty('--c', color);
+    const li = document.createElement('li'); li.style.setProperty('--c', color); li.className = 'clickable';
+    li.addEventListener('click', (ev) => { if (!ev.target.closest('a,button')) showMap(r); });
     const head = document.createElement('div'); head.className = 'head';
     const type = document.createElement('span'); type.className = 'type'; type.textContent = name;
     const from = document.createElement('span'); from.className = 'from'; from.textContent = a.source; head.append(type, from);
@@ -539,9 +552,17 @@ function renderAnnouncements(items, offline) {
     const mine = document.createElement('div'); mine.className = 'small muted'; mine.textContent = adr ? `Za adresu: ${adr.label}` : '';
     li.append(head, when, where, mine);
     if (r.quality !== 'exact') { const c = document.createElement('span'); c.className = 'check'; c.textContent = { area: 'U tvom naselju, provjeri ulicu', city: 'U tvom gradu, provjeri ulicu' }[r.quality] ?? 'U tvojoj ulici, provjeri broj'; li.append(c); }
+    { const mb = document.createElement('button'); mb.type = 'button'; mb.className = 'btn sky mapbtn'; mb.textContent = 'Prikaži na karti'; mb.addEventListener('click', () => showMap(r)); li.append(mb); }
     if (/^https:\/\//.test(a.url)) { const p = document.createElement('div'); const l = document.createElement('a'); l.href = a.url; l.rel = 'noopener noreferrer'; l.target = '_blank'; l.textContent = 'Izvorna objava'; p.append(l); li.append(p); }
     ul.append(li);
   }
+}
+
+let mapParam = new URLSearchParams(location.search).get('map');
+function maybeOpenFromUrl() {
+  if (!mapParam) return;
+  const hit = currentItems.find((r) => r.ann.id === mapParam);
+  if (hit) { showMap(hit); mapParam = null; try { history.replaceState(null, '', location.pathname + location.hash); } catch { /* */ } }
 }
 
 async function loadAnnouncements() {
@@ -549,8 +570,8 @@ async function loadAnnouncements() {
   $('ann-state').textContent = 'Tražim najave za tvoje adrese…';
   try {
     const { results } = await api('/match', { addresses });
-    LS.set('nr.last', results); renderAnnouncements(results, false);
-  } catch { renderAnnouncements(LS.get('nr.last', []), true); }
+    LS.set('nr.last', results); renderAnnouncements(results, false); maybeOpenFromUrl();
+  } catch { renderAnnouncements(LS.get('nr.last', []), true); maybeOpenFromUrl(); }
 }
 
 /* ---------- instalacija ---------- */
@@ -578,6 +599,8 @@ async function init() {
   for (const [k, v] of Object.entries(REGIONS)) { const o = document.createElement('option'); o.value = k; o.textContent = v; sel.append(o); }
   $('q').addEventListener('input', onType);
   $('city-q').addEventListener('input', onCityType);
+  $('city-q').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $('city-sugg').querySelector('li')?.click(); } });
+  $('ann-map-all').addEventListener('click', () => showMap(null));
   $('city-form').addEventListener('submit', (e) => e.preventDefault());
   $('addr-form').addEventListener('submit', addAddress);
   $('manual-toggle').addEventListener('click', () => { const m = $('manual'); m.hidden = !m.hidden; $('manual-toggle').textContent = m.hidden ? 'Upiši ručno' : 'Vrati pretraživanje'; });

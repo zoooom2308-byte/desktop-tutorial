@@ -19,7 +19,7 @@ export default async (req, ctx) => {
     for (const ann of anns) {
       for (const [i, addr] of addresses.entries()) {
         const q = matchAnnouncement(ann, addr);
-        if (q) results.push({ addressIndex: i, quality: q, ann: { id: ann.id, type: ann.type, source: ann.sourceName, title: ann.title, place: ann.place, streets: ann.streets, start: ann.start, end: ann.end, allDay: !!ann.allDay, note: ann.note, url: ann.url } });
+        if (q) results.push({ addressIndex: i, quality: q, ann: { id: ann.id, type: ann.type, source: ann.sourceName, title: ann.title, place: ann.place, streets: ann.streets, start: ann.start, end: ann.end, allDay: !!ann.allDay, note: ann.note, url: ann.url, geo: ann.geo ?? [] } });
       }
     }
     return json({ results });

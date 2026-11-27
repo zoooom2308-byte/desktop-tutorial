@@ -15,6 +15,7 @@ import { buildMapLinks } from '../../../lib/maps.js';
 import { rateLimit } from '../../../lib/store.js';
 import { adminConfigured, adminSetup, adminLogin, adminAuth, adminLogout, computeStats } from '../../../lib/admin.js';
 import { readJson } from '../../../lib/validate.js';
+import { geocodeAnnouncements } from '../../../lib/geocode.js';
 import { recordTick, recordSync, cleanupStats, freezeVisitors } from '../../../lib/stats.js';
 import { zagrebYmd, addDaysYmd, zagrebToDate } from '../../../lib/time.js';
 
@@ -34,10 +35,11 @@ Deno.serve(async (req) => {
       const secret = (await store.getJSON('config/cron'))?.s;
       if (!secret || req.headers.get('x-cron-secret') !== secret) return text('Zabranjeno', 401);
       const t0 = Date.now();
-      const sync = await syncSources(store, { maxRequests: 40, maxMs: 70000 });
+      const sync = await syncSources(store, { maxRequests: 40, maxMs: 50000 });
+      const geocoded = await geocodeAnnouncements(store, await loadActiveAnnouncements(store, new Date()), { maxLookups: 25, maxMs: 25000 }).catch((e) => { console.error('geokodiranje', e.message); return 0; });
       const notify = await runNotifications(store);
       await recordSync(store, sync); await freezeVisitors(store); await cleanupStats(store);
-      await recordTick(store, { ms: Date.now() - t0, notify, requestsLeft: sync.requestsLeft });
+      await recordTick(store, { ms: Date.now() - t0, notify, geocoded, requestsLeft: sync.requestsLeft });
       console.log('tick', JSON.stringify({ sync, notify }));
       return withCors(new Response(JSON.stringify({ sync, notify }), { headers: { 'content-type': 'application/json' } }));
     }

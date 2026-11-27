@@ -1,7 +1,7 @@
 import { parseTargets } from './match.js';
 
-const titleCase = (s) => String(s ?? '').toLowerCase().replace(/(^|[\s\-–.(])(\p{L})/gu, (_, a, b) => a + b.toUpperCase());
-const clean = (p) => String(p ?? '').replace(/[.]+$/, '').replace(/\s+/g, ' ').trim();
+export const titleCase = (s) => String(s ?? '').toLowerCase().replace(/(^|[\s\-–.(])(\p{L})/gu, (_, a, b) => a + b.toUpperCase());
+export const clean = (p) => String(p ?? '').replace(/[.]+$/, '').replace(/\s+/g, ' ').trim();
 
 /** Poveznica koja u Google Maps (ili aplikaciji Karte na mobitelu) traži adresu. */
 export const mapsUrl = (q) => 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(`${q}, Hrvatska`);

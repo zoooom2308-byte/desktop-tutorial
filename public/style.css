@@ -251,3 +251,32 @@ body.admin{background:#e9e4d8}
 .ad-wrap{margin:34px 0;padding:10px 12px 14px;background:rgba(255,255,255,.55);border:2px dashed var(--ink);border-radius:8px}
 .ad-wrap[hidden]{display:none}
 .ad-label{margin:0 0 6px;font:700 .8rem var(--body);color:var(--muted)}
+
+/* jednostavniji raspored: grad, pa najave, pa obavijesti */
+main.wrap > .install{order:0}
+main.wrap > .b-water{order:1}
+main.wrap > #najave{order:2}
+main.wrap > .b-power{order:3}
+.standalone #najave{order:0}
+.standalone .b-water{order:1}
+
+/* karta */
+.mapdlg{width:min(980px,96vw);height:min(86vh,760px);max-width:96vw;padding:0;border:3px solid var(--ink);border-radius:10px;box-shadow:8px 8px 0 var(--ink);background:var(--paper);overflow:hidden}
+.mapdlg[open]{display:flex;flex-direction:column}
+.mapdlg::backdrop{background:rgba(20,20,20,.55)}
+.mapbar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;background:var(--sky);border-bottom:3px solid var(--ink)}
+.mapbar h3{margin:0;font:800 1.4rem var(--display)}
+#map{flex:1;min-height:260px;background:#d9e6ef}
+.mapfoot{padding:8px 14px 12px;border-top:3px solid var(--ink)}
+.legend{list-style:none;margin:0 0 4px;padding:0;display:flex;flex-wrap:wrap;gap:6px 14px}
+.legend li{display:flex;align-items:center;gap:6px;font-weight:700;font-size:.92rem}
+.legend .dot{width:14px;height:14px;border-radius:50%;background:var(--c);border:2px solid var(--ink);display:inline-block}
+.mapfoot p{margin:2px 0 0}
+.mp strong{display:block;margin-bottom:2px}
+.mp .small{font-size:.85rem;color:#555}
+.mp .mlinks{display:flex;flex-direction:column;gap:2px;margin-top:6px}
+.leaflet-container{font-family:var(--body)}
+.ann-list li.clickable{cursor:pointer}
+.ann-list li.clickable:hover{box-shadow:6px 6px 0 var(--c,var(--gas))}
+.ann-list .mapbtn{margin-top:8px}
+.allmap{margin:6px 0 2px}

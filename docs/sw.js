@@ -1,7 +1,7 @@
-const CACHE = 'najava-v8';
+const CACHE = 'najava-v9';
 const DIAG = 'nr-diag';
 const abs = (p) => new URL(p, self.registration.scope).href;
-const SHELL = ['./', 'style.css', 'app.js', 'region.js', 'text.js', 'match.js', 'maps.js', 'parts.js', 'config.js', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'bg-pebbles.svg', 'fonts/barlow-condensed-latin-800-normal.woff2', 'fonts/barlow-latin-500-normal.woff2'];
+const SHELL = ['./', 'style.css', 'app.js', 'region.js', 'text.js', 'match.js', 'maps.js', 'mapview.js', 'parts.js', 'config.js', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'bg-pebbles.svg', 'fonts/barlow-condensed-latin-800-normal.woff2', 'fonts/barlow-latin-500-normal.woff2'];
 
 self.addEventListener('install', (e) => { e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL.map(abs))).then(() => self.skipWaiting())); });
 self.addEventListener('activate', (e) => {
@@ -26,7 +26,7 @@ self.addEventListener('push', (e) => {
     let d = {};
     try { d = e.data ? e.data.json() : {}; } catch { d = { title: 'Najava radova', body: e.data ? e.data.text() : '' }; }
     const title = String(d.title || 'Najava radova').slice(0, 120);
-    const url = abs(typeof d.url === 'string' && /^(\/|\.\/)/.test(d.url) ? d.url.replace(/^\//, './') : './');
+    const url = /^[a-f0-9]{8,32}$/.test(d.annId || '') ? abs('./?map=' + d.annId + '#najave') : abs(typeof d.url === 'string' && /^(\/|\.\/)/.test(d.url) ? d.url.replace(/^\//, './') : './');
     const opts = { body: String(d.body || '').slice(0, 300), tag: d.tag || undefined, icon: abs('icons/icon-192.png'), badge: abs('icons/icon-192.png'), lang: 'hr', vibrate: [200, 100, 200], data: { url } };
     const rec = { at: Date.now(), title, tag: d.tag || null, shown: false, error: null };
     try { await self.registration.showNotification(title, opts); rec.shown = true; }
