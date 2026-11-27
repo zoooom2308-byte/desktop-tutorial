@@ -1,25 +1,13 @@
-// Karta radova (Leaflet + OpenStreetMap). Sav tekst ide kroz textContent; Leaflet se učitava tek pri prvom otvaranju karte.
+// Karta radova ispod odabranog grada (Leaflet + OpenStreetMap). Sav tekst ide kroz textContent; Leaflet se učitava tek kad karta zatreba.
 // Koordinate određuje preglednik (Nominatim: najviše 1 upit u sekundi, rezultati se pamte 30 dana), jer javni geokoderi blokiraju poslužiteljske adrese.
 import { targetsFor } from './maps.js';
+
 const COLORS = { struja: '#e23b2e', voda: '#1f7fd6', plin: '#f2b705', grijanje: '#c63a8d', ceste: '#ff6a13' };
-const NAMES = { struja: 'Struja', voda: 'Voda', plin: 'Plin', grijanje: 'Grijanje', ceste: 'Promet' };
+const NAMES = { struja: 'Struja', voda: 'Voda', plin: 'Plin', grijanje: 'Grijanje', ceste: 'Promet (ceste)' };
 const dayFmt = new Intl.DateTimeFormat('hr-HR', { timeZone: 'Europe/Zagreb', weekday: 'long', day: 'numeric', month: 'long' });
 const timeFmt = new Intl.DateTimeFormat('hr-HR', { timeZone: 'Europe/Zagreb', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' });
 const gmaps = (lat, lon) => `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
-let loading, map;
-
-function loadLeaflet() {
-  if (globalThis.L) return Promise.resolve(globalThis.L);
-  loading ??= new Promise((resolve, reject) => {
-    const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'vendor/leaflet/leaflet.css'; document.head.append(css);
-    const s = document.createElement('script'); s.src = 'vendor/leaflet/leaflet.js';
-    s.onload = () => resolve(globalThis.L); s.onerror = () => { loading = null; reject(new Error('Karta se nije uspjela učitati.')); };
-    document.head.append(s);
-  });
-  return loading;
-}
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
-
 
 /* ---------- koordinate ---------- */
 const BBOX = { minLat: 42.3, maxLat: 46.7, minLon: 13.3, maxLon: 19.6 };
@@ -43,7 +31,6 @@ async function nominatim(q) {
     const rec = { at: Date.now(), lat: +lat.toFixed(5), lon: +lon.toFixed(5) }; lsSet(key, rec); return rec;
   } catch { return undefined; }
 }
-/** Točke za najavu: ulice (s brojem, a ako ne uspije bez broja), ili područje. onPoint se zove čim je točka poznata. */
 async function resolveItem(it, onPoint, alive) {
   const points = [];
   for (const t of targetsFor(it)) {
@@ -56,6 +43,18 @@ async function resolveItem(it, onPoint, alive) {
   return points;
 }
 
+/* ---------- Leaflet ---------- */
+let loading;
+function loadLeaflet() {
+  if (globalThis.L) return Promise.resolve(globalThis.L);
+  loading ??= new Promise((resolve, reject) => {
+    const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'vendor/leaflet/leaflet.css'; document.head.append(css);
+    const s = document.createElement('script'); s.src = 'vendor/leaflet/leaflet.js';
+    s.onload = () => resolve(globalThis.L); s.onerror = () => { loading = null; reject(new Error('Karta se nije uspjela učitati.')); };
+    document.head.append(s);
+  });
+  return loading;
+}
 function popupFor(item, pt) {
   const box = el('div', 'mp');
   box.append(el('strong', null, `${NAMES[item.type] ?? 'Radovi'}: ${pt.label}`));
@@ -70,71 +69,85 @@ function popupFor(item, pt) {
   return box;
 }
 
-/** items: najave s poljem geo [{label, lat, lon, area}]. focusId: najava koja se ističe. */
-export async function openMap({ items, focusId = null, title = 'Radovi na karti' }) {
-  const dlg = document.getElementById('map-dialog'), host = document.getElementById('map');
-  document.getElementById('map-title').textContent = title;
-  const note = document.getElementById('map-note'), legend = document.getElementById('map-legend'), only = document.getElementById('map-only'), onlyRow = document.getElementById('map-only-row');
-  note.textContent = 'Učitavam kartu…'; legend.replaceChildren();
-  if (!dlg.open) dlg.showModal();
-  let L;
-  try { L = await loadLeaflet(); } catch (e) { note.textContent = e.message; return; }
-  map?.remove(); host.replaceChildren();
-  map = L.map(host, { zoomControl: true, attributionControl: true });
-  L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>' }).addTo(map);
-  const group = L.featureGroup().addTo(map);
-  const types = new Set();
-  const token = (openMap.token = (openMap.token ?? 0) + 1);
-  const alive = () => openMap.token === token && dlg.open;
-  // Pomak koji je napravio korisnik (ne mi) zaustavlja automatsko približavanje
-  let userMoved = false, programmatic = false;
-  const prog = (fn) => { programmatic = true; try { fn(); } finally { programmatic = false; } };
-  map.on('dragstart zoomstart', () => { if (!programmatic) userMoved = true; });
-  const markers = new Map(); // najava -> lista markera
-  let focusLayer = null, shown = 0, total = items.length, onlyFocus = false;
-  const addPoint = (it, pt) => {
-    if (onlyFocus && focusId && it.id !== focusId) return;
-    types.add(it.type);
-    const focus = it.id === focusId;
-    const m = L.circleMarker([pt.lat, pt.lon], { radius: focus ? 13 : 9, color: '#1b1b19', weight: focus ? 4 : 2.5, fillColor: COLORS[it.type] ?? '#555', fillOpacity: pt.area ? 0.45 : 0.95, dashArray: pt.area ? '4 3' : null });
-    m.bindPopup(() => popupFor(it, pt), { maxWidth: 260 }); m.addTo(group);
-    if (!markers.has(it.id)) markers.set(it.id, []);
-    markers.get(it.id).push(m);
-    if (focus && !focusLayer) focusLayer = m;
-    legend.replaceChildren();
-    for (const t of types) { const li = el('li'); const dot = el('i', 'dot'); dot.style.setProperty('--c', COLORS[t] ?? '#555'); li.append(dot, el('span', null, NAMES[t] ?? t)); legend.append(li); }
-  };
-  const fit = () => {
-    const b = group.getBounds(); if (!b.isValid()) return;
-    prog(() => { if (group.getLayers().length === 1) map.setView(b.getCenter(), 16, { animate: false }); else map.fitBounds(b, { padding: [36, 36], maxZoom: 16, animate: false }); });
-  };
-  const status = (extra = '') => { note.textContent = `${markers.size} od ${total} najava na karti.${extra}`; };
-  prog(() => map.setView([44.5, 16.3], 7, { animate: false }));
-  onlyRow.hidden = !focusId; only.checked = false;
-  only.onchange = () => { onlyFocus = only.checked; for (const [id, list] of markers) for (const m of list) { if (onlyFocus && focusId && id !== focusId) group.removeLayer(m); else group.addLayer(m); } fit(); };
+const S = { map: null, group: null, L: null, items: [], key: '', markers: new Map(), types: new Set(), token: 0, userMoved: false, programmatic: false, focusId: null, queue: [], running: false };
+const $ = (id) => document.getElementById(id);
+const prog = (fn) => { S.programmatic = true; try { fn(); } finally { S.programmatic = false; } };
 
-  // redoslijed: odabrana najava prvo (da je odmah vidiš), zatim ostale
-  const order = [...items].sort((a, b) => (b.id === focusId) - (a.id === focusId));
-  let missing = 0;
-  for (const it of order) {
-    if (!alive()) return;
-    let pts = it.geo ?? [];
-    if (pts.length) { for (const pt of pts) addPoint(it, pt); }
-    else { status(' Određujem lokacije…'); pts = await resolveItem(it, (pt) => { if (alive()) addPoint(it, pt); }, alive); }
-    if (!pts.length) missing += 1;
-    if (!alive()) return;
-    if (it.id === focusId && focusLayer && !userMoved) { prog(() => map.setView(focusLayer.getLatLng(), 15, { animate: false })); focusLayer.openPopup(); }
-    else if (!focusId && !userMoved) fit();
-  }
-  if (!alive()) return;
-  if (!userMoved && !focusId) fit(); else if (!userMoved && focusId) fit();
-  if (focusLayer && !focusLayer.isPopupOpen()) focusLayer.openPopup();
-  status(missing ? ` Za ${missing} lokacija nije pronađena.` : (items.length ? '' : ' Nema najava za prikaz.'));
-  if (!items.length) note.textContent = 'Nema najava za prikaz.';
-  setTimeout(() => map?.invalidateSize(), 150);
+function fitAll() {
+  if (!S.group) return; const b = S.group.getBounds(); if (!b.isValid()) return;
+  prog(() => { if (S.group.getLayers().length === 1) S.map.setView(b.getCenter(), 16, { animate: false }); else S.map.fitBounds(b, { padding: [36, 36], maxZoom: 16, animate: false }); });
+}
+function legend() {
+  const ul = $('map-legend'); ul.replaceChildren();
+  for (const t of S.types) { const li = el('li'); const dot = el('i', 'dot'); dot.style.setProperty('--c', COLORS[t] ?? '#555'); li.append(dot, el('span', null, NAMES[t] ?? t)); ul.append(li); }
+}
+function status(extra = '') { $('map-note').textContent = S.items.length ? `${S.markers.size} od ${S.items.length} najava prikazano na karti.${extra}` : 'Za tvoje gradove trenutno nema najava.'; }
+function styleMarker(m, focus, type, area) { m.setStyle({ radius: focus ? 14 : 9, weight: focus ? 4 : 2.5, fillColor: COLORS[type] ?? '#555', fillOpacity: area ? 0.45 : 0.95 }); }
+
+function addPoint(it, pt) {
+  const m = S.L.circleMarker([pt.lat, pt.lon], { color: '#1b1b19', dashArray: pt.area ? '4 3' : null });
+  styleMarker(m, it.id === S.focusId, it.type, pt.area);
+  m.bindPopup(() => popupFor(it, pt), { maxWidth: 260 }); m.addTo(S.group);
+  if (!S.markers.has(it.id)) S.markers.set(it.id, []);
+  S.markers.get(it.id).push({ m, pt, type: it.type });
+  S.types.add(it.type); legend();
 }
 
-export function closeMap() { const d = document.getElementById('map-dialog'); if (d?.open) d.close(); }
-document.getElementById('map-close')?.addEventListener('click', closeMap);
-document.getElementById('map-dialog')?.addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.preventDefault(); closeMap(); } });
-document.getElementById('map-dialog')?.addEventListener('close', () => { openMap.token = (openMap.token ?? 0) + 1; map?.remove(); map = null; });
+async function run(token) {
+  if (S.running) return; S.running = true;
+  const alive = () => S.token === token;
+  try {
+    while (S.queue.length && alive()) {
+      const it = S.queue.shift();
+      let pts = it.geo ?? [];
+      if (pts.length) pts.forEach((pt) => addPoint(it, pt));
+      else { status(' Određujem lokacije…'); pts = await resolveItem(it, (pt) => { if (alive()) addPoint(it, pt); }, alive); }
+      if (!alive()) return;
+      if (it.id === S.focusId) focusNow(); else if (!S.userMoved && !S.focusId) fitAll();
+    }
+    if (alive()) { status(S.items.length - S.markers.size ? ` Za ${S.items.length - S.markers.size} lokacija nije pronađena.` : ''); if (!S.userMoved && !S.focusId) fitAll(); }
+  } finally { S.running = false; }
+}
+
+function focusNow() {
+  const list = S.markers.get(S.focusId); if (!list?.length) return;
+  for (const [id, ms] of S.markers) for (const x of ms) styleMarker(x.m, id === S.focusId, x.type, x.pt.area);
+  const m = list[0].m; list.forEach((x) => x.m.bringToFront());
+  prog(() => S.map.setView(m.getLatLng(), 15, { animate: false })); m.openPopup();
+}
+
+/** Postavi najave koje se prikazuju na karti (zove se pri svakom osvježavanju popisa). */
+export async function setMapItems(items) {
+  const section = $('karta');
+  section.hidden = false;
+  const key = items.map((i) => i.id).join(',');
+  if (S.map && key === S.key) return;
+  try { S.L = await loadLeaflet(); } catch (e) { $('map-note').textContent = e.message; return; }
+  if (!S.map) {
+    S.map = S.L.map($('map'), { zoomControl: true });
+    S.L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>' }).addTo(S.map);
+    S.group = S.L.featureGroup().addTo(S.map);
+    S.map.on('dragstart zoomstart', () => { if (!S.programmatic) S.userMoved = true; });
+    prog(() => S.map.setView([44.5, 16.3], 7, { animate: false }));
+    $('map-all').addEventListener('click', () => { S.focusId = null; S.userMoved = false; for (const [, ms] of S.markers) for (const x of ms) styleMarker(x.m, false, x.type, x.pt.area); S.map.closePopup(); fitAll(); });
+  }
+  S.items = items; S.key = key; S.token += 1; S.running = false;
+  S.group.clearLayers(); S.markers.clear(); S.types.clear(); legend(); S.userMoved = false;
+  S.queue = [...items];
+  if (S.focusId) S.queue.sort((a, b) => (b.id === S.focusId) - (a.id === S.focusId));
+  status(items.length ? ' Određujem lokacije…' : '');
+  run(S.token);
+  setTimeout(() => S.map?.invalidateSize(), 200);
+}
+
+/** Istakni najavu na karti (pomakni se na nju i otvori skočni prozor). */
+export function focusMapItem(id, { scroll = true } = {}) {
+  S.focusId = id; S.userMoved = false;
+  if (scroll) $('karta')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const idx = S.queue.findIndex((i) => i.id === id);
+  if (idx > 0) S.queue.unshift(...S.queue.splice(idx, 1)); // još se određuje: prebaci na početak reda
+  if (S.markers.has(id)) focusNow();
+  setTimeout(() => S.map?.invalidateSize(), 250);
+}
+
+export function hideMap() { const s = $('karta'); if (s) s.hidden = true; }

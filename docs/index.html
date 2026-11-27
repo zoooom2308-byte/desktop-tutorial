@@ -143,7 +143,7 @@
 
       <section class="board b-water" aria-labelledby="h-addr">
         <h3 id="h-addr" class="tab">Gdje želiš obavijesti</h3>
-        <p class="muted">Upiši svoj grad i odmah vidiš radove. Dodirni radove da ih vidiš na karti. Možeš dodati više gradova i dijelove grada.</p>
+        <p class="muted">Upiši svoj grad i odmah vidiš radove. Radove vidiš i na karti: dodirni najavu da je pronađeš. Možeš dodati više gradova i dijelove grada.</p>
         <ul id="addr-list" class="addr-list"></ul>
         <p id="addr-empty" class="muted">Još nisi dodao ni jedan grad. Upiši ga ispod.</p>
 
@@ -185,10 +185,17 @@
         </details>
       </section>
 
+      <section id="karta" class="board b-gas" aria-labelledby="h-map" hidden>
+        <h3 id="h-map" class="tab">Karta radova</h3>
+        <p id="map-note" class="small muted" role="status">Upiši grad da vidiš radove na karti.</p>
+        <div id="map" role="application" aria-label="Karta radova"></div>
+        <ul id="map-legend" class="legend"></ul>
+        <div class="row"><button id="map-all" class="btn sky" type="button">Prikaži sve radove</button></div>
+      </section>
+
       <section id="najave" class="board b-gas" aria-labelledby="h-ann">
         <h3 id="h-ann" class="tab">Što se kopa kod tebe</h3>
         <p id="ann-state" class="muted small"></p>
-        <button id="ann-map-all" class="btn sky allmap" type="button" hidden>Karta svih radova</button>
         <ul id="ann-list" class="ann-list"></ul>
       </section>
 
@@ -252,17 +259,7 @@
     </footer>
   </div>
 
-  <dialog id="map-dialog" class="mapdlg" aria-labelledby="map-title">
-    <header class="mapbar"><h3 id="map-title">Radovi na karti</h3><button id="map-close" class="btn" type="button" aria-label="Zatvori kartu">Zatvori</button></header>
-    <div id="map" role="application" aria-label="Karta radova"></div>
-    <div class="mapfoot">
-      <ul id="map-legend" class="legend"></ul>
-      <label id="map-only-row" class="chk" hidden><input id="map-only" type="checkbox"><span>Samo odabrana najava</span></label>
-      <p id="map-note" class="small muted" role="status"></p>
-    </div>
-  </dialog>
-
-  <div id="toast" class="toast" role="status" aria-live="polite" hidden><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 4 29 32H11Z" fill="#ff6a13" stroke="#1b1b19" stroke-width="2.5" stroke-linejoin="round"/><rect x="16" y="15" width="8" height="5" fill="#fff"/><rect x="6" y="31" width="28" height="5" rx="1.5" fill="#1b1b19"/></svg><span id="toast-text"></span></div>
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden><svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 4 29 32H11Z" fill="#ff6a13" stroke="#1b1b19" stroke-width="2.5" stroke-linejoin="round"/><rect x="16" y="15" width="8" height="5" fill="#fff"/><rect x="6" y="31" width="28" height="5" rx="1.5" fill="#1b1b19"/></svg><span id="toast-text"></span></div>
 
   <script type="module" src="app.js"></script>
 </body>
