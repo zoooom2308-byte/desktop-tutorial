@@ -123,11 +123,10 @@ async function enablePush() {
   await refreshStatus();
 }
 
-let ntfyTopic = LS.get('nr.ntfy', null);
 async function syncSubscription(sub) {
   sub ??= await currentSub();
-  if ((!sub && !ntfyTopic) || !addresses.length) return;
-  await api('/subscribe', { ...(sub ? { subscription: sub.toJSON() } : {}), ...(ntfyTopic ? { ntfy: ntfyTopic } : {}), addresses });
+  if (!sub || !addresses.length) return;
+  await api('/subscribe', { subscription: sub.toJSON(), addresses });
 }
 
 async function sendTest() {
@@ -167,9 +166,9 @@ async function runDiagnostics() {
   const win = /Windows/i.test(navigator.userAgent), mac = /Mac OS X/i.test(navigator.userAgent) && !isIOS();
   if (isIOS() && !isStandalone()) {
     row('bad', 'Aplikacija nije instalirana na početni zaslon.');
-    return note('Na iPhoneu obavijesti rade samo iz instalirane aplikacije: u Safariju dodirni Dijeli, Dodaj na početni zaslon, pa otvori aplikaciju s ikone. Ili uključi rezervni kanal ntfy ispod.');
+    return note('Na iPhoneu obavijesti rade samo iz instalirane aplikacije: u Safariju dodirni Dijeli, Dodaj na početni zaslon, pa otvori aplikaciju s ikone.');
   }
-  if (!pushSupported()) { row('bad', 'Ovaj preglednik ne podržava push obavijesti.'); return note('Probaj Chrome, Edge ili Firefox, ili uključi rezervni kanal ntfy ispod.'); }
+  if (!pushSupported()) { row('bad', 'Ovaj preglednik ne podržava push obavijesti.'); return note('Probaj Chrome, Edge ili Firefox.'); }
   row('ok', 'Preglednik podržava obavijesti.');
   if (Notification.permission !== 'granted') {
     row('bad', Notification.permission === 'denied' ? 'Obavijesti su blokirane za ovu stranicu.' : 'Dozvola za obavijesti još nije dana.');
@@ -194,13 +193,13 @@ async function runDiagnostics() {
     try { await sub.unsubscribe(); } catch { /* */ }
     await refreshStatus(); return note('Dodirni "Uključi obavijesti" da se pretplatiš ponovno.');
   }
-  if (!r.push?.ok) { wait.className = 'bad'; wait.textContent = `Poslužitelj nije uspio predati obavijest (kod ${r.push?.status ?? '?'}).`; return note('Pokušaj ponovno za minutu. Ako se ponavlja, uključi rezervni kanal ntfy.'); }
+  if (!r.push?.ok) { wait.className = 'bad'; wait.textContent = `Poslužitelj nije uspio predati obavijest (kod ${r.push?.status ?? '?'}).`; return note('Pokušaj ponovno za minutu.'); }
   wait.className = 'ok'; wait.textContent = 'Poslužitelj je predao obavijest Googleovom push servisu.';
   const arrive = row('wait', 'Čekam da obavijest stigne u preglednik (do 14 s)…');
   const m = await got;
   if (!m) {
     arrive.className = 'bad'; arrive.textContent = 'Obavijest nije stigla u preglednik.';
-    return note((win ? 'Najčešći uzroci na Windowsu: Chrome je ugašen i ne radi u pozadini (chrome://settings/system, uključi "Nastavi pokretati pozadinske aplikacije kad je Google Chrome zatvoren"), vatrozid ili VPN blokiraju Googleov push (port 5228), ili je računalo bilo u mirovanju. ' : 'Provjeri internetsku vezu, da preglednik nije ugašen, te blokira li vatrozid ili VPN push. ') + 'Ako ne ide, uključi rezervni kanal ntfy ispod.');
+    return note((win ? 'Najčešći uzroci na Windowsu: Chrome je ugašen i ne radi u pozadini (chrome://settings/system, uključi "Nastavi pokretati pozadinske aplikacije kad je Google Chrome zatvoren"), vatrozid ili VPN blokiraju Googleov push (port 5228), ili je računalo bilo u mirovanju. ' : 'Provjeri internetsku vezu, da preglednik nije ugašen, te blokira li vatrozid ili VPN push. '));
   }
   arrive.className = 'ok'; arrive.textContent = 'Obavijest je stigla u preglednik.';
   const reg = await navigator.serviceWorker.ready;
@@ -209,33 +208,7 @@ async function runDiagnostics() {
     row('ok', 'Preglednik ju je predao sustavu za prikaz.');
     note(win ? 'Ako je ne vidiš na zaslonu: otvori Postavke Windowsa, Sustav, Obavijesti. Uključi "Obavijesti" i "Google Chrome", te isključi "Ne ometaj" (Focus assist). Provjeri i chrome://settings/content/notifications.'
       : mac ? 'Ako je ne vidiš: Postavke sustava, Obavijesti, Google Chrome, uključi obavijesti i isključi Focus.' : 'Ako je ne vidiš: u postavkama telefona za ovu aplikaciju (ili Chrome) uključi obavijesti i isključi "Ne ometaj".');
-  } else { row('bad', `Preglednik nije prikazao obavijest${m.error ? ' (' + m.error + ')' : ''}.`); note('Osvježi stranicu i ponovno pokreni provjeru; ako se ponavlja, uključi rezervni kanal ntfy.'); }
-}
-
-/* ---------- rezervni kanal: ntfy ---------- */
-const newTopic = () => 'najava-' + Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => 'abcdefghijklmnopqrstuvwxyz0123456789'[b % 36]).join('');
-function renderNtfy() {
-  $('ntfy-on').checked = !!ntfyTopic; $('ntfy-box').hidden = !ntfyTopic;
-  if (ntfyTopic) { $('ntfy-topic').textContent = ntfyTopic; $('ntfy-open').href = `ntfy://ntfy.sh/${ntfyTopic}`; }
-  if (ntfyTopic && $('backup')) $('backup').open = true;
-}
-async function toggleNtfy() {
-  if ($('ntfy-on').checked) {
-    if (!addresses.length) { $('ntfy-on').checked = false; return toast('Najprije dodaj grad'); }
-    ntfyTopic = newTopic(); LS.set('nr.ntfy', ntfyTopic); renderNtfy();
-    try { await syncSubscription(); toast('Rezervni kanal je uključen'); } catch (e) { msg(e.message, true); }
-  } else {
-    const t = ntfyTopic; ntfyTopic = null; LS.del('nr.ntfy'); renderNtfy();
-    try { await api('/unsubscribe', { ntfy: t }); await syncSubscription(); } catch { /* */ }
-    toast('Rezervni kanal je isključen');
-  }
-}
-async function testNtfy() {
-  try { const r = await api('/test-push', { ntfy: ntfyTopic }); toast(r.ntfy?.ok ? 'Probna ntfy obavijest je poslana' : 'ntfy nije prihvatio poruku, pokušaj ponovno'); }
-  catch (e) { toast(e.message); }
-}
-async function copyTopic() {
-  try { await navigator.clipboard.writeText(ntfyTopic); toast('Tema je kopirana'); } catch { toast('Označi temu i kopiraj ručno'); }
+  } else { row('bad', `Preglednik nije prikazao obavijest${m.error ? ' (' + m.error + ')' : ''}.`); note('Osvježi stranicu i ponovno pokreni provjeru; ako se ponavlja, javi nam što piše ispod.'); }
 }
 
 /* ---------- geokodiranje: preglednik pita OpenStreetMap Nominatim izravno (najviše 1 upit u sekundi, s cacheom) ---------- */
@@ -281,7 +254,7 @@ function persist() {
 async function removeEntry(a) {
   addresses = addresses.filter((x) => x.id !== a.id); LS.set('nr.addresses', addresses); renderAddresses();
   const sub = await currentSub();
-  if (addresses.length) { await syncSubscription(sub).catch(() => {}); } else { if (sub || ntfyTopic) await api('/unsubscribe', { ...(sub ? { endpoint: sub.endpoint } : {}), ...(ntfyTopic ? { ntfy: ntfyTopic } : {}) }).catch(() => {}); await sub?.unsubscribe().catch(() => {}); }
+  if (addresses.length) { await syncSubscription(sub).catch(() => {}); } else if (sub) { await api('/unsubscribe', { endpoint: sub.endpoint }).catch(() => {}); await sub.unsubscribe().catch(() => {}); }
   await refreshStatus(); loadAnnouncements();
 }
 
@@ -545,9 +518,8 @@ function setupInstall() {
 async function wipe() {
   if (!confirm('Obrisati sve tvoje adrese i pretplatu na obavijesti s ovog uređaja i s našeg poslužitelja?')) return;
   const sub = await currentSub();
-  try { if (sub || ntfyTopic) await api('/unsubscribe', { ...(sub ? { endpoint: sub.endpoint } : {}), ...(ntfyTopic ? { ntfy: ntfyTopic } : {}) }); } catch { /* server će ukloniti mrtvu pretplatu */ }
+  try { if (sub) await api('/unsubscribe', { endpoint: sub.endpoint }); } catch { /* server će ukloniti mrtvu pretplatu */ }
   try { await sub?.unsubscribe(); } catch { /* */ }
-  ntfyTopic = null; LS.del('nr.ntfy'); renderNtfy();
   addresses = []; LS.del('nr.addresses'); LS.del('nr.last');
   renderAddresses(); renderAnnouncements([], false); await refreshStatus();
   msg('Svi podaci su obrisani.'); toast('Podaci su obrisani');
@@ -565,10 +537,6 @@ async function init() {
   $('push-test').addEventListener('click', sendTest);
   $('wipe').addEventListener('click', wipe);
   $('diag-btn').addEventListener('click', runDiagnostics);
-  $('ntfy-on').addEventListener('change', toggleNtfy);
-  $('ntfy-test').addEventListener('click', testNtfy);
-  $('ntfy-copy').addEventListener('click', copyTopic);
-  renderNtfy();
   if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', onSwMessage);
   renderAddresses(); setupInstall(); loadAnnouncements();
   if ('serviceWorker' in navigator) {
@@ -576,7 +544,7 @@ async function init() {
   }
   await refreshStatus();
   // ako se pretplata promijenila na pregledniku, uskladi je s poslužiteljem
-  const sub = await currentSub(); if ((sub || ntfyTopic) && addresses.length) syncSubscription(sub).catch(() => {});
+  const sub = await currentSub(); if (sub && addresses.length) syncSubscription(sub).catch(() => {});
   addEventListener('online', loadAnnouncements);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) loadAnnouncements(); });
 }

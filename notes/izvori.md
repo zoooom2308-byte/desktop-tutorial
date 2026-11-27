@@ -15,3 +15,6 @@ Sve se čita automatski, pristojno: opisni User-Agent bez osobnih podataka, razm
 - **Vodovodi Osijek, Zadar, Pula, Varaždin i ostali**: stranice se otvaraju, ali nisu napisani čitači (Osijek se ne može dohvatiti).
 - **Plin izvan Zagreba** i **radovi na cestama izvan Rijeke** (HAK/HAC, gradski prometni centri): nisu povezani; na autocestama nema adresa, pa nisu ni cilj aplikacije.
 - Uvjete korištenja nisam pronašao ni za jedan izvor; osim robots.txt-a HEP-a nema izričitih zabrana.
+
+## Bilješka o rezervnom kanalu (ntfy)
+Kod za ntfy (`lib/ntfy.js`) postoji, ali je isključen u sučelju: ntfy.sh vraća HTTP 429 za IP adrese Supabase poslužitelja (dijele ih mnogi projekti), pa dostava nije pouzdana.

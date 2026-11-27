@@ -196,27 +196,7 @@
         <p id="push-msg" class="small" role="status" hidden></p>
         <ul id="diag" class="diag" aria-live="polite" hidden></ul>
 
-        <details class="exact" id="backup">
-          <summary>Rezervni kanal za mobitel: aplikacija ntfy (preporučeno)</summary>
-          <p class="small">Ako obavijesti iz preglednika ne stižu, <strong>ntfy</strong> je besplatna aplikacija koja ih prima pouzdano, bez računa. Obavijest se šalje preko ntfy.sh poslužitelja na tvoju tajnu temu, pa ne dijeli svoju temu ni s kim.</p>
-          <label class="chk"><input id="ntfy-on" type="checkbox"><span>Uključi rezervni kanal (ntfy)</span></label>
-          <div id="ntfy-box" hidden>
-            <ol class="steps">
-              <li>Instaliraj aplikaciju <strong>ntfy</strong> (Android: Google Play ili F-Droid; iPhone: App Store).</li>
-              <li>U aplikaciji dodirni <strong>+</strong> i upiši ovu temu (ili dodirni gumb ispod):
-                <div class="topic"><code id="ntfy-topic"></code></div>
-              </li>
-              <li>Dodirni <strong>Pošalji probnu ntfy obavijest</strong> i provjeri da je stigla.</li>
-            </ol>
-            <div class="row">
-              <a id="ntfy-open" class="btn orange" href="#">Otvori u ntfy aplikaciji</a>
-              <button id="ntfy-copy" class="btn" type="button">Kopiraj temu</button>
-              <button id="ntfy-test" class="btn sky" type="button">Pošalji probnu ntfy obavijest</button>
-            </div>
-          </div>
-        </details>
-
-        <details class="exact" id="phone-guide">
+                <details class="exact" id="phone-guide">
           <summary>Kako instalirati na mobitel</summary>
           <h4 class="gh">Android (Chrome)</h4>
           <ol class="steps">
@@ -230,7 +210,7 @@
             <li>Dodirni <strong>Dijeli</strong> (kvadrat sa strelicom) pa <strong>Dodaj na početni zaslon</strong> pa <strong>Dodaj</strong>.</li>
             <li>Otvori aplikaciju <strong>s ikone na početnom zaslonu</strong> (ne iz Safarija), dodaj grad i dodirni <strong>Uključi obavijesti</strong>, pa <strong>Dopusti</strong>.</li>
           </ol>
-          <p class="small muted">Ako obavijesti ipak ne stignu, uključi rezervni kanal ntfy iznad.</p>
+          <p class="small muted">Ako obavijesti ne stignu, dodirni <strong>Provjeri obavijesti</strong> u odjeljku iznad: pokazat će ti točno gdje zapinje.</p>
         </details>
       </section>
 
@@ -242,7 +222,7 @@
     </main>
 
     <footer class="wrap foot">
-      <p>Spremamo samo tvoje adrese i pretplatu na obavijesti. Bez računa, lokacije, imena i praćenja. Podaci o radovima dolaze od HEP ODS-a, ViO-a i Gradske plinare Zagreb. Uvijek provjeri izvornu objavu. Rezervni kanal ntfy (neobavezan) šalje obavijesti preko usluge ntfy.sh na tvoju tajnu temu.</p>
+      <p>Spremamo samo tvoje adrese i pretplatu na obavijesti. Bez računa, lokacije, imena i praćenja. Podaci o radovima dolaze od HEP ODS-a, ViO-a i Gradske plinare Zagreb. Uvijek provjeri izvornu objavu.</p>
       <button id="wipe" class="link danger">Obriši moje podatke</button>
       <p class="small">Pokriveno: struja u cijeloj Hrvatskoj (HEP ODS), voda u Zagrebu, Rijeci i okolici te Splitu, plin u Zagrebu, a u Rijeci i grijanje i promet. Ostalo još nije pokriveno.</p>
     </footer>
