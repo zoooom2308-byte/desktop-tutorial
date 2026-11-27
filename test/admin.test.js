@@ -41,9 +41,20 @@ test('prijava: ispravna lozinka daje sesiju, pogrešna ne; odjava poništava ses
   assert.equal(await adminAuth(store, r.token), true);
   assert.equal(await adminAuth(store, 'x'.repeat(64)), false);
   assert.equal(await adminAuth(store, undefined), false);
-  assert.equal(await adminAuth(store, r.token, new Date(Date.now() + 13 * 3600_000)), false); // istekla (12 h)
+  assert.equal(await adminAuth(store, r.token, new Date(Date.now() + 13 * 3600_000)), true); // ostaje prijavljen i nakon 13 sati
+  assert.equal(await adminAuth(store, r.token, new Date(Date.now() + 31 * 86400_000)), false); // istječe nakon 30 dana
   await adminLogout(store, r.token); assert.equal(await adminAuth(store, r.token), false);
   assert.ok(!JSON.stringify([...store.m.entries()]).includes(r.token)); // sirovi token se ne sprema
+});
+
+test('ostani prijavljen: korištenje produljuje prijavu (klizni rok od 30 dana)', async () => {
+  const { store, code } = await ready(); await adminSetup(store, IP, { code, password: PW });
+  const t0 = new Date('2026-12-01T10:00:00Z');
+  const r = await adminLogin(store, IP, { password: PW }, t0);
+  const day = (n) => new Date(t0.getTime() + n * 86400_000);
+  assert.equal(await adminAuth(store, r.token, day(20)), true);   // produljuje na 20. + 30 = 50. dan
+  assert.equal(await adminAuth(store, r.token, day(45)), true);   // bez produljenja bi već isteklo (30. dan)
+  assert.equal(await adminAuth(store, r.token, day(80)), false);  // 35 dana bez korištenja: istekla
 });
 
 test('zaštita od pogađanja: nakon 5 pogrešnih pokušaja prijava je blokirana i s ispravnom lozinkom', async () => {

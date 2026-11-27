@@ -1,8 +1,9 @@
-// Admin nadzorna ploča. Sav tekst ide kroz textContent; token sesije se čuva samo u sessionStorage ovog taba.
+// Admin nadzorna ploča. Sav tekst ide kroz textContent; token sesije se čuva u localStorage ovog uređaja.
 const $ = (id) => document.getElementById(id);
 const API = (globalThis.NR_CONFIG?.api ?? '/api').replace(/\/$/, '');
 const REGIONS = { zagreb: 'Zagreb i okolica', zabok: 'Krapinsko-zagorska', varazdin: 'Varaždinska', cakovec: 'Međimurska', koprivnica: 'Koprivničko-križevačka', bjelovar: 'Bjelovarsko-bilogorska', virovitica: 'Virovitičko-podravska', pozega: 'Požeško-slavonska', sbrod: 'Brodsko-posavska', osijek: 'Osječko-baranjska', vinkovci: 'Vukovarsko-srijemska', sisak: 'Sisačko-moslavačka', karlovac: 'Karlovačka', rijeka: 'Primorsko-goranska', gospic: 'Ličko-senjska', pula: 'Istarska', zadar: 'Zadarska', sibenik: 'Šibensko-kninska', split: 'Splitsko-dalmatinska', dubrovnik: 'Dubrovačko-neretvanska' };
-const store = { get() { try { return sessionStorage.getItem('nr.admin'); } catch { return null; } }, set(v) { try { sessionStorage.setItem('nr.admin', v); } catch { /* */ } }, del() { try { sessionStorage.removeItem('nr.admin'); } catch { /* */ } } };
+// Prijava ostaje na ovom uređaju (30 dana, produljuje se pri korištenju) dok se ne odjaviš.
+const store = { get() { try { return localStorage.getItem('nr.admin'); } catch { return null; } }, set(v) { try { localStorage.setItem('nr.admin', v); } catch { /* */ } }, del() { try { localStorage.removeItem('nr.admin'); } catch { /* */ } } };
 let timer;
 
 async function call(path, { method = 'GET', body, token } = {}) {
