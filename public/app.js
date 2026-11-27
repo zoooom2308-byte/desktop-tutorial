@@ -1,6 +1,7 @@
 // Najava radova – klijent. Sav tekst iz izvora ispisuje se isključivo preko textContent.
 import { regionFromAddress } from './region.js';
 import { staticParts } from './parts.js';
+import { buildMapLinks } from './maps.js';
 const API = (globalThis.NR_CONFIG?.api ?? '/api').replace(/\/$/, '');
 const $ = (id) => document.getElementById(id);
 const LS = {
@@ -487,7 +488,19 @@ function renderAnnouncements(items, offline) {
     when.textContent = a.allDay ? `${fmtDay.format(s)}, cijeli dan` : `${fmtDay.format(s)}, ${fmtTime.format(s)} – ${fmtTime.format(e)}`;
     const where = document.createElement('div'); where.className = 'where';
     const adr = addresses[r.addressIndex];
-    where.textContent = `${a.streets.replace(/^\s*-\s*/gm, '').replace(/\n+/g, '; ').replace(/^naselja:\s*/i, 'Područje: ')}${a.place ? ' (' + a.place.replace(/\.$/, '') + ')' : ''}`;
+    const map = buildMapLinks(a, adr);
+    const list = document.createElement('ul'); list.className = 'maps'; list.setAttribute('aria-label', 'Mjesto radova na karti');
+    for (const l of map.links) {
+      const item = document.createElement('li'); const link = document.createElement('a');
+      link.href = l.url; link.target = '_blank'; link.rel = 'noopener noreferrer';
+      link.setAttribute('aria-label', `${l.label}: prikaži na Google kartama`);
+      const pin = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); pin.setAttribute('viewBox', '0 0 24 24'); pin.setAttribute('class', 'pin'); pin.setAttribute('aria-hidden', 'true');
+      const path = document.createElementNS('http://www.w3.org/2000/svg', 'path'); path.setAttribute('d', 'M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5Z'); pin.append(path);
+      const t = document.createElement('span'); t.textContent = l.label;
+      link.append(pin, t); item.append(link); list.append(item);
+    }
+    if (map.more) { const m = document.createElement('li'); m.className = 'more'; if (map.area) { const al = document.createElement('a'); al.href = map.area.url; al.target = '_blank'; al.rel = 'noopener noreferrer'; al.textContent = `i još ${map.more} (područje ${map.area.label} na karti)`; m.append(al); } else m.textContent = `i još ${map.more}`; list.append(m); }
+    where.append(list);
     const mine = document.createElement('div'); mine.className = 'small muted'; mine.textContent = adr ? `Za adresu: ${adr.label}` : '';
     li.append(head, when, where, mine);
     if (r.quality !== 'exact') { const c = document.createElement('span'); c.className = 'check'; c.textContent = { area: 'U tvom naselju, provjeri ulicu', city: 'U tvom gradu, provjeri ulicu' }[r.quality] ?? 'U tvojoj ulici, provjeri broj'; li.append(c); }

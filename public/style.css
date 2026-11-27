@@ -195,3 +195,12 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--water);outline-offs
 a.btn{text-decoration:none}
 .gh{margin:14px 0 4px;font:800 1.15rem/1.2 var(--display)}
 #backup .row,#phone-guide .steps{margin-top:8px}
+
+/* poveznice na Google karte */
+.maps{list-style:none;margin:6px 0 0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.maps a{display:inline-flex;align-items:center;gap:6px;padding:5px 10px 4px;border:2px solid var(--ink);border-radius:999px;background:var(--paper);color:var(--ink);font:700 .95rem/1.2 var(--body);text-decoration:none;box-shadow:0 2px 0 var(--ink);word-break:break-word}
+.maps a:hover{background:var(--hivis)}
+.maps a:active{transform:translateY(2px);box-shadow:none}
+.maps .pin{width:16px;height:16px;flex:none;fill:var(--power)}
+.maps .more{font-weight:600;color:var(--muted);align-self:center}
+.maps .more a{box-shadow:none;border-style:dashed}
