@@ -1,4 +1,5 @@
-const CACHE = 'najava-v4';
+const CACHE = 'najava-v5';
+const DIAG = 'nr-diag';
 const abs = (p) => new URL(p, self.registration.scope).href;
 const SHELL = ['./', 'style.css', 'app.js', 'region.js', 'text.js', 'parts.js', 'config.js', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'bg-pebbles.svg', 'fonts/barlow-condensed-latin-800-normal.woff2', 'fonts/barlow-latin-500-normal.woff2'];
 
@@ -18,13 +19,25 @@ self.addEventListener('fetch', (e) => {
   }));
 });
 
+const note = async (rec) => { try { await (await caches.open(DIAG)).put('last', new Response(JSON.stringify(rec))); } catch { /* */ } };
+
 self.addEventListener('push', (e) => {
-  let d = {};
-  try { d = e.data ? e.data.json() : {}; } catch { d = { title: 'Najava radova', body: e.data?.text() }; }
-  e.waitUntil(self.registration.showNotification(String(d.title || 'Najava radova').slice(0, 120), {
-    body: String(d.body || '').slice(0, 300), tag: d.tag || undefined, icon: abs('icons/icon-192.png'), badge: abs('icons/icon-192.png'),
-    data: { url: abs(typeof d.url === 'string' && /^(\/|\.\/)/.test(d.url) ? d.url.replace(/^\//, './') : './') }, renotify: false,
-  }));
+  e.waitUntil((async () => {
+    let d = {};
+    try { d = e.data ? e.data.json() : {}; } catch { d = { title: 'Najava radova', body: e.data ? e.data.text() : '' }; }
+    const title = String(d.title || 'Najava radova').slice(0, 120);
+    const url = abs(typeof d.url === 'string' && /^(\/|\.\/)/.test(d.url) ? d.url.replace(/^\//, './') : './');
+    const opts = { body: String(d.body || '').slice(0, 300), tag: d.tag || undefined, icon: abs('icons/icon-192.png'), badge: abs('icons/icon-192.png'), lang: 'hr', vibrate: [200, 100, 200], data: { url } };
+    const rec = { at: Date.now(), title, tag: d.tag || null, shown: false, error: null };
+    try { await self.registration.showNotification(title, opts); rec.shown = true; }
+    catch (err) {
+      rec.error = String(err && err.message || err).slice(0, 160);
+      try { await self.registration.showNotification(title, { body: opts.body, data: opts.data }); rec.shown = true; } catch (err2) { rec.error += ' / ' + String(err2 && err2.message || err2).slice(0, 80); }
+    }
+    await note(rec);
+    // Obavijesti otvorenu stranicu da može prikazati poruku i ako je sustav sakrije
+    for (const c of await self.clients.matchAll({ type: 'window', includeUncontrolled: true })) c.postMessage({ type: 'push', title, body: opts.body, tag: d.tag || null, shown: rec.shown, error: rec.error });
+  })());
 });
 
 self.addEventListener('notificationclick', (e) => {
