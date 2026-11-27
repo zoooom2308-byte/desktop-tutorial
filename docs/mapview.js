@@ -81,7 +81,7 @@ function legend() {
   const ul = $('map-legend'); ul.replaceChildren();
   for (const t of S.types) { const li = el('li'); const dot = el('i', 'dot'); dot.style.setProperty('--c', COLORS[t] ?? '#555'); li.append(dot, el('span', null, NAMES[t] ?? t)); ul.append(li); }
 }
-function status(extra = '') { $('map-note').textContent = S.items.length ? `${S.markers.size} od ${S.items.length} najava prikazano na karti.${extra}` : 'Za tvoje gradove trenutno nema najava.'; }
+function status(extra = '') { $('map-note').textContent = S.items.length ? `${S.markers.size} od ${S.items.length} najava prikazano na karti.${extra}` : 'Za odabrani grad trenutno nema najavljenih radova.'; }
 function styleMarker(m, focus, type, area) { m.setStyle({ radius: focus ? 14 : 9, weight: focus ? 4 : 2.5, fillColor: COLORS[type] ?? '#555', fillOpacity: area ? 0.45 : 0.95 }); }
 
 function addPoint(it, pt) {
@@ -118,19 +118,10 @@ function focusNow() {
 
 /** Postavi najave koje se prikazuju na karti (zove se pri svakom osvježavanju popisa). */
 export async function setMapItems(items) {
-  const section = $('karta');
-  section.hidden = false;
   const key = items.map((i) => i.id).join(',');
-  if (S.map && key === S.key) return;
-  try { S.L = await loadLeaflet(); } catch (e) { $('map-note').textContent = e.message; return; }
-  if (!S.map) {
-    S.map = S.L.map($('map'), { zoomControl: true });
-    S.L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>' }).addTo(S.map);
-    S.group = S.L.featureGroup().addTo(S.map);
-    S.map.on('dragstart zoomstart', () => { if (!S.programmatic) S.userMoved = true; });
-    prog(() => S.map.setView([44.5, 16.3], 7, { animate: false }));
-    $('map-all').addEventListener('click', () => { S.focusId = null; S.userMoved = false; for (const [, ms] of S.markers) for (const x of ms) styleMarker(x.m, false, x.type, x.pt.area); S.map.closePopup(); fitAll(); });
-  }
+  await initMap();
+  if (!S.map) return;
+  $('map-all').hidden = false;
   S.items = items; S.key = key; S.token += 1; S.running = false;
   S.group.clearLayers(); S.markers.clear(); S.types.clear(); legend(); S.userMoved = false;
   S.queue = [...items];
@@ -150,4 +141,16 @@ export function focusMapItem(id, { scroll = true } = {}) {
   setTimeout(() => S.map?.invalidateSize(), 250);
 }
 
-export function hideMap() { const s = $('karta'); if (s) s.hidden = true; }
+/** Karta se prikazuje tek kad korisnik klikne tab: učitaj Leaflet i napravi praznu kartu. */
+export async function initMap() {
+  if (S.map) { setTimeout(() => S.map.invalidateSize(), 50); return; }
+  try { S.L = await loadLeaflet(); } catch (e) { $('map-note').textContent = e.message; return; }
+  S.map = S.L.map($('map'), { zoomControl: true });
+  S.L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a>' }).addTo(S.map);
+  S.group = S.L.featureGroup().addTo(S.map);
+  S.map.on('dragstart zoomstart', () => { if (!S.programmatic) S.userMoved = true; });
+  prog(() => S.map.setView([44.5, 16.3], 7, { animate: false }));
+  $('map-all').addEventListener('click', () => { S.focusId = null; S.userMoved = false; for (const [, ms] of S.markers) for (const x of ms) styleMarker(x.m, false, x.type, x.pt.area); S.map.closePopup(); fitAll(); });
+  setTimeout(() => S.map.invalidateSize(), 100);
+}
+export function mapResize() { setTimeout(() => S.map?.invalidateSize(), 80); }

@@ -129,7 +129,12 @@
   </header>
 
   <div class="under">
+    <nav class="tabs" aria-label="Odjeljci"><div class="wrap tabs-in" role="tablist">
+      <button id="tab-main" class="tab-btn" role="tab" aria-selected="true" aria-controls="view-main" type="button">Radovi</button>
+      <button id="tab-map" class="tab-btn" role="tab" aria-selected="false" aria-controls="view-map" type="button">Karta</button>
+    </div></nav>
     <main class="wrap">
+      <div id="view-main" role="tabpanel" aria-labelledby="tab-main">
       <section id="install-card" class="board install" hidden>
         <h3 class="tab">Instaliraj aplikaciju</h3>
         <p id="install-text">Dodaj Najavu radova na početni zaslon da radi kao prava aplikacija.</p>
@@ -185,15 +190,7 @@
         </details>
       </section>
 
-      <section id="karta" class="board b-gas" aria-labelledby="h-map" hidden>
-        <h3 id="h-map" class="tab">Karta radova</h3>
-        <p id="map-note" class="small muted" role="status">Upiši grad da vidiš radove na karti.</p>
-        <div id="map" role="application" aria-label="Karta radova"></div>
-        <ul id="map-legend" class="legend"></ul>
-        <div class="row"><button id="map-all" class="btn sky" type="button">Prikaži sve radove</button></div>
-      </section>
-
-      <section id="najave" class="board b-gas" aria-labelledby="h-ann">
+            <section id="najave" class="board b-gas" aria-labelledby="h-ann">
         <h3 id="h-ann" class="tab">Što se kopa kod tebe</h3>
         <p id="ann-state" class="muted small"></p>
         <ul id="ann-list" class="ann-list"></ul>
@@ -249,6 +246,27 @@
           <p class="small muted">Ako obavijesti ne stignu, dodirni <strong>Provjeri obavijesti</strong> u odjeljku iznad: pokazat će ti točno gdje zapinje.</p>
         </details>
       </section>
+
+      
+
+      </div>
+
+      <div id="view-map" role="tabpanel" aria-labelledby="tab-map" hidden>
+        <section class="board b-gas" aria-labelledby="h-map">
+          <h3 id="h-map" class="tab">Karta radova</h3>
+          <div id="map-empty" class="muted" hidden>
+            <p>Karta pretražuje gradove koje si unio. Najprije upiši grad na kartici <strong>Radovi</strong>.</p>
+            <button id="map-go-main" class="btn orange" type="button">Upiši grad</button>
+          </div>
+          <div id="map-controls">
+            <label>Odaberi grad <select id="map-city"></select></label>
+            <div class="row"><button id="map-search" class="btn orange" type="button">Pretraži odabrani grad</button><button id="map-all" class="btn sky" type="button" hidden>Prikaži sve radove</button></div>
+          </div>
+          <p id="map-note" class="small muted" role="status">Odaberi grad i klikni "Pretraži odabrani grad".</p>
+          <div id="map" role="application" aria-label="Karta radova"></div>
+          <ul id="map-legend" class="legend"></ul>
+        </section>
+      </div>
     </main>
 
     <footer class="wrap foot">
