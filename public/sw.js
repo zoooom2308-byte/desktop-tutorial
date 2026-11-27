@@ -1,4 +1,4 @@
-const CACHE = 'najava-v6';
+const CACHE = 'najava-v7';
 const DIAG = 'nr-diag';
 const abs = (p) => new URL(p, self.registration.scope).href;
 const SHELL = ['./', 'style.css', 'app.js', 'region.js', 'text.js', 'match.js', 'maps.js', 'parts.js', 'config.js', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'bg-pebbles.svg', 'fonts/barlow-condensed-latin-800-normal.woff2', 'fonts/barlow-latin-500-normal.woff2'];
@@ -34,6 +34,7 @@ self.addEventListener('push', (e) => {
       rec.error = String(err && err.message || err).slice(0, 160);
       try { await self.registration.showNotification(title, { body: opts.body, data: opts.data }); rec.shown = true; } catch (err2) { rec.error += ' / ' + String(err2 && err2.message || err2).slice(0, 80); }
     }
+    if (typeof d.count === 'number' && self.navigator && self.navigator.setAppBadge) { try { await self.navigator.setAppBadge(d.count); } catch { /* */ } }
     await note(rec);
     // Obavijesti otvorenu stranicu da može prikazati poruku i ako je sustav sakrije
     for (const c of await self.clients.matchAll({ type: 'window', includeUncontrolled: true })) c.postMessage({ type: 'push', title, body: opts.body, tag: d.tag || null, shown: rec.shown, error: rec.error });

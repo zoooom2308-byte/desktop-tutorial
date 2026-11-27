@@ -124,10 +124,11 @@ async function enablePush() {
   await refreshStatus();
 }
 
+let digestOn = LS.get('nr.digest', true) !== false;
 async function syncSubscription(sub) {
   sub ??= await currentSub();
   if (!sub || !addresses.length) return;
-  await api('/subscribe', { subscription: sub.toJSON(), addresses });
+  await api('/subscribe', { subscription: sub.toJSON(), addresses, digest: digestOn });
 }
 
 async function sendTest() {
@@ -210,6 +211,40 @@ async function runDiagnostics() {
     note(win ? 'Ako je ne vidiš na zaslonu: otvori Postavke Windowsa, Sustav, Obavijesti. Uključi "Obavijesti" i "Google Chrome", te isključi "Ne ometaj" (Focus assist). Provjeri i chrome://settings/content/notifications.'
       : mac ? 'Ako je ne vidiš: Postavke sustava, Obavijesti, Google Chrome, uključi obavijesti i isključi Focus.' : 'Ako je ne vidiš: u postavkama telefona za ovu aplikaciju (ili Chrome) uključi obavijesti i isključi "Ne ometaj".');
   } else { row('bad', `Preglednik nije prikazao obavijest${m.error ? ' (' + m.error + ')' : ''}.`); note('Osvježi stranicu i ponovno pokreni provjeru; ako se ponavlja, javi nam što piše ispod.'); }
+}
+
+
+/* ---------- widget za iPhone (Scriptable) ---------- */
+const SITE = location.origin + location.pathname.replace(/[^/]*$/, '');
+function widgetScript(a) {
+  const q = `${API}/widget?region=${encodeURIComponent(a.region)}&city=${encodeURIComponent(a.city)}&parts=${encodeURIComponent((a.parts ?? []).join(','))}`;
+  return `// Najava radova: widget za Scriptable (grad: ${a.city})
+const API_URL = ${JSON.stringify(q)};
+const SITE = ${JSON.stringify(SITE + '#najave')};
+let data = null;
+try { data = await new Request(API_URL).loadJSON(); } catch (e) {}
+const w = new ListWidget();
+w.backgroundColor = new Color("#6ec3e8");
+w.url = SITE;
+const head = w.addText(${JSON.stringify('Radovi: ' + a.city)});
+head.font = Font.heavySystemFont(16);
+head.textColor = new Color("#1b1b19");
+w.addSpacer(6);
+const line = (txt, size) => { const t = w.addText(txt); t.font = Font.systemFont(size || 12); t.textColor = new Color("#1b1b19"); t.lineLimit = 2; return t; };
+if (!data) line("Nema veze. Pokušaj kasnije.");
+else if (!data.items.length) line("Nema najavljenih radova danas i sutra.");
+else for (const it of data.items.slice(0, 4)) line((it.day === "danas" ? "Danas" : it.day === "sutra" ? "Sutra" : it.day) + " " + it.time + "  " + it.where, 12);
+w.refreshAfterDate = new Date(Date.now() + 30 * 60 * 1000);
+if (config.runsInWidget) Script.setWidget(w); else await w.presentMedium();
+Script.complete();
+`;
+}
+async function copyWidget() {
+  const a = addresses.find((x) => x.kind === 'area');
+  const m = $('widget-msg');
+  if (!a) { m.textContent = 'Najprije dodaj grad.'; return; }
+  try { await navigator.clipboard.writeText(widgetScript(a)); m.textContent = `Skripta za ${a.city} je kopirana. Zalijepi je u Scriptable.`; toast('Skripta je kopirana'); }
+  catch { m.textContent = 'Kopiranje nije uspjelo. Pokušaj ponovno u Safariju.'; }
 }
 
 /* ---------- geokodiranje: preglednik pita OpenStreetMap Nominatim izravno (najviše 1 upit u sekundi, s cacheom) ---------- */
@@ -549,6 +584,11 @@ async function init() {
   $('push-on').addEventListener('click', enablePush);
   $('push-test').addEventListener('click', sendTest);
   $('wipe').addEventListener('click', wipe);
+  $('widget-copy').addEventListener('click', copyWidget);
+  $('digest-on').checked = digestOn;
+  $('digest-on').addEventListener('change', () => { digestOn = $('digest-on').checked; LS.set('nr.digest', digestOn); syncSubscription().catch(() => {}); toast(digestOn ? 'Jutarnji sažetak je uključen' : 'Jutarnji sažetak je isključen'); });
+  document.body.classList.toggle('standalone', isStandalone());
+  try { navigator.clearAppBadge?.(); } catch { /* */ }
   $('diag-btn').addEventListener('click', runDiagnostics);
   if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', onSwMessage);
   renderAddresses(); setupInstall(); loadAnnouncements();
@@ -559,6 +599,6 @@ async function init() {
   // ako se pretplata promijenila na pregledniku, uskladi je s poslužiteljem
   const sub = await currentSub(); if (sub && addresses.length) syncSubscription(sub).catch(() => {});
   addEventListener('online', loadAnnouncements);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) loadAnnouncements(); });
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { loadAnnouncements(); try { navigator.clearAppBadge?.(); } catch { /* */ } } });
 }
 init();

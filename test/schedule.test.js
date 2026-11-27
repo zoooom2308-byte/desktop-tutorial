@@ -63,7 +63,7 @@ async function setup() {
   a.firstSeen = Z('2026-11-25', '10:00').toISOString();
   await store.setJSON(`ann/${a.id}`, a);
   const addr = { id: 'a1', label: 'Dom', street: 'Mate Meršića', number: '5', city: 'Zagreb', places: [], region: 'zagreb' };
-  await store.setJSON('sub/abc', { push: { endpoint: 'https://x/y', keys: { p256dh: 'p', auth: 'a' } }, addresses: [addr] });
+  await store.setJSON('sub/abc', { digest: false, push: { endpoint: 'https://x/y', keys: { p256dh: 'p', auth: 'a' } }, addresses: [addr] });
   return { store, a };
 }
 

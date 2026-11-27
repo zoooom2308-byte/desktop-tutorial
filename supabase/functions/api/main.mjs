@@ -10,6 +10,10 @@ import { syncSources } from '../../../lib/sync.js';
 import { runNotifications } from '../../../lib/notify.js';
 import { loadActiveAnnouncements } from '../../../lib/sync.js';
 import { isDp } from '../../../lib/region.js';
+import { matchAnnouncement } from '../../../lib/match.js';
+import { buildMapLinks } from '../../../lib/maps.js';
+import { rateLimit } from '../../../lib/store.js';
+import { zagrebYmd, addDaysYmd, zagrebToDate } from '../../../lib/time.js';
 
 const ROUTES = { '/config': config, '/geocode': geocode, '/match': match, '/subscribe': subscribe, '/unsubscribe': unsubscribe, '/test-push': testPush };
 const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, POST, OPTIONS', 'access-control-allow-headers': 'content-type', 'access-control-max-age': '86400' };
@@ -30,6 +34,24 @@ Deno.serve(async (req) => {
       const notify = await runNotifications(store);
       console.log('tick', JSON.stringify({ sync, notify }));
       return withCors(new Response(JSON.stringify({ sync, notify }), { headers: { 'content-type': 'application/json' } }));
+    }
+    if (path === '/widget') {
+      // Danas i sutra za jedan grad: za widget (Scriptable na iPhoneu) i druge male klijente
+      const sp = new URL(req.url).searchParams;
+      const region = sp.get('region'), city = (sp.get('city') ?? '').replace(/[\u0000-\u001f<>]/g, ' ').trim().slice(0, 60);
+      const parts = (sp.get('parts') ?? '').split(',').map((x) => x.replace(/[\u0000-\u001f<>]/g, ' ').trim().slice(0, 60)).filter(Boolean).slice(0, 20);
+      if (!isDp(region) || city.length < 2) return text('Neispravan upit', 400);
+      const store = await openStore();
+      if (!(await rateLimit(store, ip, 'widget', 40))) return text('Previše upita', 429);
+      const now = new Date(), today = zagrebYmd(now), tomorrow = addDaysYmd(today, 1), limit = zagrebToDate(addDaysYmd(today, 2), '00:00');
+      const entry = { kind: 'area', city, region, parts, strict: false };
+      const hhmm = (d) => new Intl.DateTimeFormat('hr-HR', { timeZone: 'Europe/Zagreb', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(d);
+      const items = (await loadActiveAnnouncements(store, now, [region])).filter((a) => new Date(a.start) < limit && matchAnnouncement(a, entry)).slice(0, 12).map((a) => {
+        const l = buildMapLinks(a, entry).links[0], st = new Date(a.start), ymd = zagrebYmd(st);
+        return { type: a.type, source: a.sourceName, day: ymd === today ? 'danas' : ymd === tomorrow ? 'sutra' : ymd, time: a.allDay ? 'cijeli dan' : `${hhmm(st)}–${hhmm(new Date(a.end))}`, where: l?.label ?? a.place ?? '', maps: l?.url ?? null };
+      });
+      await store.setJSON(`demand/${region}`, { at: now.toISOString() });
+      return withCors(new Response(JSON.stringify({ updated: now.toISOString(), city, count: items.length, items }), { headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'public, max-age=300' } }));
     }
     if (path === '/places') {
       // Nazivi mjesta/dijelova grada koji se stvarno pojavljuju u aktualnim najavama regije (za izbor dijelova grada)

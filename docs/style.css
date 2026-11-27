@@ -204,3 +204,11 @@ a.btn{text-decoration:none}
 .maps .pin{width:16px;height:16px;flex:none;fill:var(--power)}
 .maps .more{font-weight:600;color:var(--muted);align-self:center}
 .maps .more a{box-shadow:none;border-style:dashed}
+
+/* instalirana aplikacija: najave odmah na vrhu */
+main.wrap{display:flex;flex-direction:column}
+.standalone #najave{order:-1;margin-top:28px}
+.standalone .hero-copy{display:none}
+.standalone .scene{height:clamp(150px,22vw,200px)}
+.standalone .hero-top{padding-bottom:0}
+.code{margin:8px 0;padding:10px;background:#fff;border:2px dashed var(--ink);border-radius:6px;max-height:180px;overflow:auto;white-space:pre-wrap;word-break:break-all;font:500 .8rem/1.35 ui-monospace,Consolas,monospace}

@@ -194,9 +194,31 @@
           <button id="diag-btn" class="btn" type="button">Provjeri obavijesti</button>
         </div>
         <p id="push-msg" class="small" role="status" hidden></p>
+        <label class="chk"><input id="digest-on" type="checkbox" checked><span>Jutarnji sažetak u 7:00: što se danas radi kod mene</span></label>
         <ul id="diag" class="diag" aria-live="polite" hidden></ul>
 
-                <details class="exact" id="phone-guide">
+                <details class="exact" id="widget-guide">
+          <summary>Widget i prečaci na mobitelu</summary>
+          <p class="small">Prava widget-ikona na početnom zaslonu traži nativnu aplikaciju, pa web-aplikacija nudi ovo:</p>
+          <ul class="steps">
+            <li><strong>Zaključani zaslon:</strong> jutarnji sažetak u 7:00 pokazuje što se danas radi kod tebe (uključi kvačicu iznad).</li>
+            <li><strong>Broj na ikoni:</strong> uz sažetak ikona instalirane aplikacije pokazuje broj današnjih radova (Android i iPhone iz početnog zaslona).</li>
+            <li><strong>Prečac (Android):</strong> dugo drži ikonu aplikacije pa odaberi <strong>Radovi danas</strong>.</li>
+            <li><strong>Odmah na radovima:</strong> instalirana aplikacija se otvara s popisom najava na vrhu.</li>
+          </ul>
+          <h4 class="gh">Pravi widget na iPhoneu (besplatna aplikacija Scriptable)</h4>
+          <ol class="steps">
+            <li>Instaliraj <strong>Scriptable</strong> iz App Storea.</li>
+            <li>Dodaj grad gore, pa dodirni <strong>Kopiraj skriptu za widget</strong>.</li>
+            <li>U Scriptableu dodirni <strong>+</strong>, zalijepi skriptu i dodirni <strong>Done</strong>.</li>
+            <li>Na početnom zaslonu dugo drži prazno mjesto, dodirni <strong>+</strong>, odaberi <strong>Scriptable</strong> (srednji widget), pa <strong>Edit Widget</strong> i izaberi tu skriptu.</li>
+          </ol>
+          <div class="row"><button id="widget-copy" class="btn orange" type="button">Kopiraj skriptu za widget</button></div>
+          <p id="widget-msg" class="small muted" role="status"></p>
+          <p class="small muted">Napomena: skripta za widget nije isprobana na stvarnom iPhoneu.</p>
+        </details>
+
+        <details class="exact" id="phone-guide">
           <summary>Kako instalirati na mobitel</summary>
           <h4 class="gh">Android (Chrome)</h4>
           <ol class="steps">

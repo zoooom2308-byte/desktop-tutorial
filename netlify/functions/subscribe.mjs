@@ -14,7 +14,7 @@ export default async (req, ctx) => {
     const id = ch.ntfy ? 'n' + sha(ch.ntfy, 23) : subIdOf(ch.push.endpoint);
     if (ch.ntfy && ch.push) await store.del(`sub/${subIdOf(ch.push.endpoint)}`); // preseljenje starijeg zapisa
     addresses.forEach((a, i) => { a.id ??= `a${i}${id.slice(0, 5)}`; });
-    await store.setJSON(`sub/${id}`, { ...(ch.push ? { push: ch.push } : {}), ...(ch.ntfy ? { ntfy: ch.ntfy } : {}), addresses, updated: new Date().toISOString() });
+    await store.setJSON(`sub/${id}`, { ...(ch.push ? { push: ch.push } : {}), ...(ch.ntfy ? { ntfy: ch.ntfy } : {}), digest: body.digest !== false, addresses, updated: new Date().toISOString() });
     for (const r of new Set(addresses.map((a) => a.region).filter(Boolean))) await store.setJSON(`demand/${r}`, { at: new Date().toISOString() });
     return json({ ok: true });
   } catch (e) {
