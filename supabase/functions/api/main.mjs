@@ -13,10 +13,13 @@ import { isDp } from '../../../lib/region.js';
 import { matchAnnouncement } from '../../../lib/match.js';
 import { buildMapLinks } from '../../../lib/maps.js';
 import { rateLimit } from '../../../lib/store.js';
+import { adminConfigured, adminSetup, adminLogin, adminAuth, adminLogout, computeStats } from '../../../lib/admin.js';
+import { readJson } from '../../../lib/validate.js';
+import { recordTick, recordSync, cleanupStats, freezeVisitors } from '../../../lib/stats.js';
 import { zagrebYmd, addDaysYmd, zagrebToDate } from '../../../lib/time.js';
 
 const ROUTES = { '/config': config, '/geocode': geocode, '/match': match, '/subscribe': subscribe, '/unsubscribe': unsubscribe, '/test-push': testPush };
-const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, POST, OPTIONS', 'access-control-allow-headers': 'content-type', 'access-control-max-age': '86400' };
+const CORS = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, POST, OPTIONS', 'access-control-allow-headers': 'content-type, authorization', 'access-control-max-age': '86400' };
 
 const withCors = (res) => { const h = new Headers(res.headers); for (const [k, v] of Object.entries(CORS)) h.set(k, v); return new Response(res.body, { status: res.status, headers: h }); };
 const text = (s, status) => withCors(new Response(JSON.stringify({ error: s }), { status, headers: { 'content-type': 'application/json' } }));
@@ -30,10 +33,24 @@ Deno.serve(async (req) => {
       const store = await openStore();
       const secret = (await store.getJSON('config/cron'))?.s;
       if (!secret || req.headers.get('x-cron-secret') !== secret) return text('Zabranjeno', 401);
+      const t0 = Date.now();
       const sync = await syncSources(store, { maxRequests: 40, maxMs: 70000 });
       const notify = await runNotifications(store);
+      await recordSync(store, sync); await freezeVisitors(store); await cleanupStats(store);
+      await recordTick(store, { ms: Date.now() - t0, notify, requestsLeft: sync.requestsLeft });
       console.log('tick', JSON.stringify({ sync, notify }));
       return withCors(new Response(JSON.stringify({ sync, notify }), { headers: { 'content-type': 'application/json' } }));
+    }
+    if (path.startsWith('/admin/')) {
+      const store = await openStore();
+      const json = (data, status = 200) => withCors(new Response(JSON.stringify(data), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } }));
+      const bearer = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '');
+      if (path === '/admin/status' && req.method === 'GET') return json({ configured: await adminConfigured(store) });
+      if (path === '/admin/setup' && req.method === 'POST') { const r = await adminSetup(store, ip, await readJson(req, 2048)); return json(r.ok ? { ok: true } : { error: r.error }, r.ok ? 200 : r.status); }
+      if (path === '/admin/login' && req.method === 'POST') { const r = await adminLogin(store, ip, await readJson(req, 2048)); return json(r.ok ? { ok: true, token: r.token, exp: r.exp } : { error: r.error }, r.ok ? 200 : r.status); }
+      if (path === '/admin/logout' && req.method === 'POST') { await adminLogout(store, bearer); return json({ ok: true }); }
+      if (path === '/admin/stats' && req.method === 'GET') { if (!(await adminAuth(store, bearer))) return json({ error: 'Nisi prijavljen.' }, 401); return json(await computeStats(store)); }
+      return json({ error: 'Nepoznata adresa' }, 404);
     }
     if (path === '/widget') {
       // Danas i sutra za jedan grad: za widget (Scriptable na iPhoneu) i druge male klijente

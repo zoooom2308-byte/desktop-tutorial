@@ -3,6 +3,7 @@ import { json, ipOf } from '../../lib/http.js';
 import { InputError, readJson, validateAddresses } from '../../lib/validate.js';
 import { loadActiveAnnouncements } from '../../lib/sync.js';
 import { matchAnnouncement } from '../../lib/match.js';
+import { recordVisit } from '../../lib/stats.js';
 
 // Bezstanje: adrese se šalju samo radi usporedbe i ne spremaju (osim oznake da regija ima korisnike).
 export default async (req, ctx) => {
@@ -11,6 +12,7 @@ export default async (req, ctx) => {
   if (!(await rateLimit(store, ipOf(req, ctx), 'match', 30))) return json({ error: 'Previše upita, pričekaj minutu.' }, 429);
   try {
     const addresses = validateAddresses((await readJson(req)).addresses);
+    await recordVisit(store, ipOf(req, ctx));
     for (const r of new Set(addresses.map((a) => a.region).filter(Boolean))) await store.setJSON(`demand/${r}`, { at: new Date().toISOString() });
     const anns = await loadActiveAnnouncements(store, new Date());
     const results = [];

@@ -225,3 +225,29 @@ body.legal{background:var(--paper)}
 .legal-body a{color:var(--ink);text-decoration-thickness:2px;text-underline-offset:3px;font-weight:700}
 .foot .links{display:flex;flex-wrap:wrap;gap:6px 18px;margin:8px 0}
 .foot .links a{color:#fff;font-weight:700}
+
+/* admin */
+body.admin{background:#e9e4d8}
+.adm-bar{display:flex;justify-content:space-between;align-items:center}
+.adm-title{font:800 1.3rem var(--display)}
+.adm{padding-block:20px 60px}
+.adm .board{margin:46px 0 22px}
+.adm-warn{background:#ffd9d4;border:3px solid var(--ink);border-radius:8px;padding:10px 14px;font-weight:700}
+.cards{list-style:none;margin:12px 0 0;padding:0;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.card{background:#fff;border:3px solid var(--ink);border-radius:8px;box-shadow:4px 4px 0 var(--ink);padding:12px}
+.card .n{display:block;font:800 2rem/1 var(--display)}
+.card .k{display:block;color:var(--muted);font-size:.85rem;line-height:1.25}
+.tablewrap{overflow:auto}
+#daily{border-collapse:collapse;width:100%;font-size:.9rem}
+#daily th,#daily td{padding:6px 8px;border-bottom:2px dashed #cfc4ad;text-align:right;white-space:nowrap}
+#daily th:first-child,#daily td:first-child{text-align:left}
+.bars{list-style:none;margin:8px 0;padding:0}
+.bar{display:grid;grid-template-columns:minmax(120px,38%) 1fr 48px;gap:8px;align-items:center;margin:6px 0;font-size:.95rem}
+.bar .bt{background:#e8e1d0;border:2px solid var(--ink);border-radius:5px;height:16px;overflow:hidden}
+.bar .bf{display:block;height:100%;width:var(--w);background:var(--water)}
+.bar .bv{text-align:right;font-weight:800}
+
+/* reklame (prikazuju se samo ako su uključene) */
+.ad-wrap{margin:34px 0;padding:10px 12px 14px;background:rgba(255,255,255,.55);border:2px dashed var(--ink);border-radius:8px}
+.ad-wrap[hidden]{display:none}
+.ad-label{margin:0 0 6px;font:700 .8rem var(--body);color:var(--muted)}

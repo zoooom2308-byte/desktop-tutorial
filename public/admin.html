@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="hr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin – Najava radova</title>
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://dqfukfvhatuiaziviloc.supabase.co; object-src 'none'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="style.css">
+  <script src="config.js"></script>
+</head>
+<body class="admin">
+  <header class="legal-top"><div class="wrap adm-bar"><strong class="adm-title">Najava radova: admin</strong><button id="logout" class="link" type="button" hidden>Odjava</button></div></header>
+  <main class="wrap adm">
+    <section id="login" class="board b-power" hidden>
+      <h3 class="tab" id="login-title">Prijava</h3>
+      <p id="setup-help" class="muted" hidden>Prvo postavljanje: upiši jednokratni kod koji si dobio i izaberi lozinku (najmanje 12 znakova).</p>
+      <form id="login-form" autocomplete="off" novalidate>
+        <label id="code-row" hidden>Kod za postavljanje <input id="code" type="password" autocomplete="off" maxlength="64"></label>
+        <label>Lozinka <input id="pw" type="password" autocomplete="current-password" maxlength="200"></label>
+        <label id="pw2-row" hidden>Ponovi lozinku <input id="pw2" type="password" autocomplete="new-password" maxlength="200"></label>
+        <p id="login-error" class="error" role="alert" hidden></p>
+        <div class="row"><button class="btn orange" type="submit" id="login-btn">Prijavi se</button></div>
+      </form>
+    </section>
+
+    <div id="dash" hidden>
+      <p class="muted small" id="updated" aria-live="polite"></p>
+      <p id="warn" class="adm-warn" role="alert" hidden></p>
+      <ul class="cards" id="cards"></ul>
+
+      <section class="board b-water"><h3 class="tab">Zadnjih 14 dana</h3>
+        <div class="tablewrap"><table id="daily"><thead><tr><th>Datum</th><th>Posjetitelji</th><th>Otvaranja</th><th>Poslano</th><th>Neuspjelo</th><th>Novi uređaji</th><th>Odjave</th></tr></thead><tbody></tbody></table></div>
+      </section>
+
+      <section class="board b-gas"><h3 class="tab">Gradovi</h3><ul class="bars" id="cities"></ul><h4 class="gh">Dijelovi grada</h4><ul class="bars" id="parts"></ul></section>
+      <section class="board b-power"><h3 class="tab">Područja (uređaji)</h3><ul class="bars" id="regions"></ul></section>
+      <section class="board b-water"><h3 class="tab">Izvori i zdravlje</h3><ul class="bars" id="sources"></ul><ul id="health" class="diag"></ul></section>
+      <section class="board b-gas"><h3 class="tab">Zarada</h3>
+        <p class="muted">Prihod od reklama vidiš u svom AdSense računu (adsense.google.com). Ovdje ga nema jer Google ne daje podatke bez tvoje prijave.</p>
+      </section>
+    </div>
+  </main>
+  <script type="module" src="admin.js"></script>
+</body>
+</html>

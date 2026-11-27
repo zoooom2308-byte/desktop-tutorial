@@ -1,6 +1,7 @@
 import { openStore, subIdOf, rateLimit, sha } from '../../lib/store.js';
 import { json, ipOf } from '../../lib/http.js';
 import { InputError, readJson } from '../../lib/validate.js';
+import { bump } from '../../lib/stats.js';
 import { validTopic } from '../../lib/ntfy.js';
 
 // "Obriši moje podatke": briše pretplatu, adrese i evidenciju poslanih obavijesti za taj uređaj.
@@ -15,6 +16,7 @@ export default async (req, ctx) => {
     if (ntfy) { if (!validTopic(ntfy)) throw new InputError('Neispravan zahtjev'); ids.push('n' + sha(ntfy, 23)); }
     if (!ids.length) throw new InputError('Neispravan zahtjev');
     for (const id of ids) {
+      if (await store.getJSON(`sub/${id}`)) await bump(store, 'subsGone');
       await store.del(`sub/${id}`);
       for (const k of await store.list('sent/')) if (k.startsWith(`sent/${id}.`)) await store.del(k);
     }
