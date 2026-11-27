@@ -584,6 +584,7 @@ async function init() {
   $('push-on').addEventListener('click', enablePush);
   $('push-test').addEventListener('click', sendTest);
   $('wipe').addEventListener('click', wipe);
+  { const u = globalThis.NR_CONFIG?.supportUrl; if (/^https:\/\//.test(u ?? '')) { const a = $('support-link'); a.href = u; a.hidden = false; } }
   $('widget-copy').addEventListener('click', copyWidget);
   $('digest-on').checked = digestOn;
   $('digest-on').addEventListener('change', () => { digestOn = $('digest-on').checked; LS.set('nr.digest', digestOn); syncSubscription().catch(() => {}); toast(digestOn ? 'Jutarnji sažetak je uključen' : 'Jutarnji sažetak je isključen'); });

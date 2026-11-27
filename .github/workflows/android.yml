@@ -1,0 +1,51 @@
+name: Android aplikacija
+
+on:
+  push:
+    branches: ['claude/**', main]
+    paths: ['android/**', '.github/workflows/android.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: android-actions/setup-android@v3
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Izgradi testni APK i AAB za Google Play
+        run: gradle -p android assembleDebug bundleRelease --no-daemon
+        env:
+          VERSION_CODE: ${{ github.run_number }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: najava-radova-android
+          path: |
+            android/app/build/outputs/apk/debug/app-debug.apk
+            android/app/build/outputs/bundle/release/app-release.aab
+
+      - name: Objavi APK za preuzimanje (GitHub Releases)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk NajavaRadova.apk
+          gh release delete android-latest --yes --cleanup-tag || true
+          gh release create android-latest NajavaRadova.apk \
+            --prerelease \
+            --target "$GITHUB_SHA" \
+            --title "Najava radova za Android (testna inačica)" \
+            --notes "Testni APK za ručnu instalaciju (sideload). Potpisan je privremenim ključem, pa pri nadogradnji prvo deinstaliraj staru inačicu. Za Google Play potpisuje se vlastitim ključem, vidi notes/objava-u-trgovine.md."

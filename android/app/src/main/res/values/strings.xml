@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Najava radova</string>
+    <string name="default_url">https://zoooom2308-byte.github.io/desktop-tutorial/?src=twa</string>
+    <string name="asset_statements">[{\"relation\": [\"delegate_permission/common.handle_all_urls\"], \"target\": {\"namespace\": \"web\", \"site\": \"https://zoooom2308-byte.github.io\"}}]</string>
+</resources>

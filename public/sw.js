@@ -1,4 +1,4 @@
-const CACHE = 'najava-v7';
+const CACHE = 'najava-v8';
 const DIAG = 'nr-diag';
 const abs = (p) => new URL(p, self.registration.scope).href;
 const SHELL = ['./', 'style.css', 'app.js', 'region.js', 'text.js', 'match.js', 'maps.js', 'parts.js', 'config.js', 'manifest.webmanifest', 'icons/icon.svg', 'icons/icon-192.png', 'bg-pebbles.svg', 'fonts/barlow-condensed-latin-800-normal.woff2', 'fonts/barlow-latin-500-normal.woff2'];
