@@ -21,7 +21,7 @@ test('geokodiranje: koordinate se spremaju u najavu, a upiti u predmemoriju (dru
   const store = memoryStore(); const calls = [];
   const f = photon(calls, { 'Školjić 1': [14.448, 45.327], 'Vodovodna 10': [14.44, 45.33] });
   const ann = mk(); await store.setJSON('ann/a1', ann);
-  assert.equal(await geocodeAnnouncements(store, [ann], { fetchImpl: f }), 1);
+  assert.equal((await geocodeAnnouncements(store, [ann], { fetchImpl: f })).done, 1);
   assert.deepEqual(ann.geo.map((g) => [g.label, g.lat, g.lon]), [['Školjić 1, 13–16', 45.327, 14.448], ['Vodovodna 10', 45.33, 14.44]]);
   assert.deepEqual((await store.getJSON('ann/a1')).geo.length, 2);
   const again = mk({ id: 'a2' }); const n = calls.length;
@@ -46,6 +46,6 @@ test('ograničenje upita po krugu: nedovršena najava ostaje za sljedeći krug',
 
 test('mrežna greška ne zapisuje prazan rezultat', async () => {
   const store = memoryStore(); const ann = mk();
-  await geocodeAnnouncements(store, [ann], { fetchImpl: async () => { throw new Error('mreža'); } });
-  assert.equal(ann.geo, undefined);
+  const r = await geocodeAnnouncements(store, [ann], { fetchImpl: async () => { throw new Error('mreža'); } });
+  assert.equal(ann.geo, undefined); assert.equal(r.error, 'mreža');
 });

@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
       if (!secret || req.headers.get('x-cron-secret') !== secret) return text('Zabranjeno', 401);
       const t0 = Date.now();
       const sync = await syncSources(store, { maxRequests: 40, maxMs: 50000 });
-      const geocoded = await geocodeAnnouncements(store, await loadActiveAnnouncements(store, new Date()), { maxLookups: 25, maxMs: 25000 }).catch((e) => { console.error('geokodiranje', e.message); return 0; });
+      const geocoded = await geocodeAnnouncements(store, await loadActiveAnnouncements(store, new Date()), { maxLookups: 25, maxMs: 25000 }).catch((e) => { console.error('geokodiranje', e.message); return { done: 0, error: e.message }; });
       const notify = await runNotifications(store);
       await recordSync(store, sync); await freezeVisitors(store); await cleanupStats(store);
       await recordTick(store, { ms: Date.now() - t0, notify, geocoded, requestsLeft: sync.requestsLeft });
