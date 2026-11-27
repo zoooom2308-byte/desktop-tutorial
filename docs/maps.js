@@ -39,3 +39,18 @@ export function buildMapLinks(ann, entry, max = 8) {
   if (!links.length && where) links.push({ label: where, url: mapsUrl(where) });
   return { links, more: Math.max(0, streets.length - max), area: where ? { label: where, url: mapsUrl(where) } : null };
 }
+
+/** Što treba geokodirati za najavu: ulice (s prvim brojem iz raspona), naselja ili samo mjesto. */
+export function targetsFor(ann, max = 6) {
+  const place = clean(String(ann.place ?? '').split(/[,;]/)[0]);
+  const where = [...new Set([place, ann.cityHint].filter(Boolean).map((x) => titleCase(clean(x))))].join(', ');
+  const { streets, settlements } = parseTargets(ann.streets);
+  const out = [];
+  for (const s of streets.slice(0, max)) {
+    const name = titleCase(s.street), num = s.ranges?.[0]?.from ?? '';
+    out.push({ label: name + (s.ranges ? ' ' + s.ranges.slice(0, 2).map(rangeText).join(', ') : ''), query: `${name}${num !== '' ? ' ' + num : ''}${where ? ', ' + where : ''}`, fallback: `${name}${where ? ', ' + where : ''}` });
+  }
+  if (!streets.length) for (const n of (settlements.length ? settlements : [place]).filter(Boolean).slice(0, max)) { const nm = titleCase(clean(n)); out.push({ label: nm, query: `${nm}${where && !where.toLowerCase().includes(nm.toLowerCase()) ? ', ' + where : ''}`, area: true }); }
+  return out;
+}
+

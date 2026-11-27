@@ -125,8 +125,8 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--water);outline-offs
 .sugg li:hover,.sugg li[aria-selected="true"]{background:var(--hivis)}
 
 /* najave */
-.ann-list li{position:relative;border:2.5px solid var(--ink);border-radius:6px;padding:12px 14px 12px 18px;margin:14px 0;background:#fff;box-shadow:4px 4px 0 var(--c,var(--gas))}
-.ann-list li::before{content:"";position:absolute;left:0;top:0;bottom:0;width:7px;background:var(--c,var(--gas));border-right:2.5px solid var(--ink)}
+.ann-list > li{position:relative;border:2.5px solid var(--ink);border-radius:6px;padding:12px 14px 12px 18px;margin:14px 0;background:#fff;box-shadow:4px 4px 0 var(--c,var(--gas))}
+.ann-list > li::before{content:"";position:absolute;left:0;top:0;bottom:0;width:7px;background:var(--c,var(--gas));border-right:2.5px solid var(--ink)}
 .ann-list .head{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
 .ann-list .type{font:800 1.2rem/1 var(--display);padding:3px 9px 1px;background:var(--c,var(--gas));border:2px solid var(--ink);border-radius:5px;color:var(--ink)}
 .ann-list .from{font-weight:700;font-size:.9rem;color:var(--muted)}
@@ -134,7 +134,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--water);outline-offs
 .ann-list .where{word-break:break-word;font-size:.98rem}
 .ann-list .check{display:inline-block;margin-top:8px;font:800 .95rem/1 var(--display);letter-spacing:.02em;background:var(--hivis);padding:5px 10px 3px;border:2px solid var(--ink);border-radius:5px;background-image:repeating-linear-gradient(-45deg,rgba(0,0,0,.08) 0 6px,transparent 6px 12px)}
 .ann-list a{color:var(--ink);font-weight:700;text-decoration-thickness:2px;text-underline-offset:3px}
-.ann-list li{animation:rise .45s ease-out both}
+.ann-list > li{animation:rise .45s ease-out both}
 @keyframes rise{from{translate:0 12px;opacity:0}}
 .steps{padding-left:22px;margin:10px 0}
 
@@ -276,7 +276,7 @@ main.wrap > .b-power{order:3}
 .mp .small{font-size:.85rem;color:#555}
 .mp .mlinks{display:flex;flex-direction:column;gap:2px;margin-top:6px}
 .leaflet-container{font-family:var(--body)}
-.ann-list li.clickable{cursor:pointer}
-.ann-list li.clickable:hover{box-shadow:6px 6px 0 var(--c,var(--gas))}
+.ann-list > li.clickable{cursor:pointer}
+.ann-list > li.clickable:hover{box-shadow:6px 6px 0 var(--c,var(--gas))}
 .ann-list .mapbtn{margin-top:8px}
 .allmap{margin:6px 0 2px}

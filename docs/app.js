@@ -393,25 +393,30 @@ async function searchCities(q) {
   return { results };
 }
 
-let cityTimer, citySeq = 0;
-function onCityType() {
-  clearTimeout(cityTimer);
+let cityTimer, citySeq = 0, pendingEnter = false;
+async function runCitySearch() {
   const q = $('city-q').value.trim(), box = $('city-sugg'), note = $('city-note');
-  box.hidden = true; box.replaceChildren(); $('city-q').setAttribute('aria-expanded', 'false'); note.hidden = true;
   if (q.length < 2) return;
-  cityTimer = setTimeout(async () => {
-    const seq = ++citySeq;
-    const data = await searchCities(q);
-    if (seq !== citySeq) return;
-    if (data.unavailable) { note.hidden = false; note.textContent = 'Pretraživanje mjesta trenutno nije dostupno. Pokušaj za minutu.'; return; }
-    if (!data.results.length) { note.hidden = false; note.textContent = 'Nismo našli to mjesto u Hrvatskoj. Provjeri pisanje.'; return; }
-    for (const r of data.results) {
-      const li = document.createElement('li'); li.setAttribute('role', 'option'); li.textContent = r.county ? `${r.city}, ${r.county}` : r.city;
-      li.addEventListener('click', () => addCity(r));
-      box.append(li);
-    }
-    box.hidden = false; $('city-q').setAttribute('aria-expanded', 'true');
-  }, 600);
+  const seq = ++citySeq;
+  const data = await searchCities(q);
+  if (seq !== citySeq) return;
+  if (data.unavailable) { note.hidden = false; note.textContent = 'Pretraživanje mjesta trenutno nije dostupno. Pokušaj za minutu.'; pendingEnter = false; return; }
+  if (!data.results.length) { note.hidden = false; note.textContent = 'Nismo našli to mjesto u Hrvatskoj. Provjeri pisanje.'; pendingEnter = false; return; }
+  box.replaceChildren();
+  for (const r of data.results) {
+    const li = document.createElement('li'); li.setAttribute('role', 'option'); li.textContent = r.county ? `${r.city}, ${r.county}` : r.city;
+    li.addEventListener('click', () => addCity(r));
+    box.append(li);
+  }
+  box.hidden = false; $('city-q').setAttribute('aria-expanded', 'true');
+  if (pendingEnter) { pendingEnter = false; box.firstElementChild?.click(); } // Enter prije dolaska prijedloga: odaberi prvi čim stignu
+}
+function onCityType() {
+  clearTimeout(cityTimer); pendingEnter = false;
+  const box = $('city-sugg'), note = $('city-note');
+  box.hidden = true; box.replaceChildren(); $('city-q').setAttribute('aria-expanded', 'false'); note.hidden = true;
+  if ($('city-q').value.trim().length < 2) return;
+  cityTimer = setTimeout(runCitySearch, 600);
 }
 function addCity(r) {
   $('city-sugg').hidden = true; $('city-q').value = '';
@@ -599,7 +604,7 @@ async function init() {
   for (const [k, v] of Object.entries(REGIONS)) { const o = document.createElement('option'); o.value = k; o.textContent = v; sel.append(o); }
   $('q').addEventListener('input', onType);
   $('city-q').addEventListener('input', onCityType);
-  $('city-q').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); $('city-sugg').querySelector('li')?.click(); } });
+  $('city-q').addEventListener('keydown', (e) => { if (e.key !== 'Enter') return; e.preventDefault(); const first = $('city-sugg').firstElementChild; if (first && !$('city-sugg').hidden) first.click(); else { clearTimeout(cityTimer); pendingEnter = true; runCitySearch(); } });
   $('ann-map-all').addEventListener('click', () => showMap(null));
   $('city-form').addEventListener('submit', (e) => e.preventDefault());
   $('addr-form').addEventListener('submit', addAddress);

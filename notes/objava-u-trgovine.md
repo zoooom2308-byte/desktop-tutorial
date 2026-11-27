@@ -32,3 +32,7 @@ iPhone ne podržava ovaj pristup. Aplikacija na iPhonu ostaje **web-aplikacija**
 - **Adrese:** javni Nominatim ne smije se koristiti za veliki komercijalni promet; za više korisnika treba vlastiti ili plaćeni geokoder.
 - **Kapacitet:** besplatne razine (Supabase, GitHub) imaju ograničenja; za tisuće korisnika treba plaćeni plan.
 - **Identitet voditelja obrade** u politici privatnosti: dopuni stvarnim imenom/tvrtkom.
+
+## Karta radova: ograničenja za veći promet
+- Pločice karte dolaze s javnog OpenStreetMap poslužitelja (tile.openstreetmap.org). Njihova pravila dopuštaju umjerenu upotrebu uz navedeno autorstvo; za mnogo korisnika treba komercijalni davatelj pločica (npr. MapTiler, Stadia, Mapbox) s vlastitim ključem.
+- Koordinate ulica određuje preglednik preko Nominatima (1 upit u sekundi po korisniku), jer javni geokoderi blokiraju poslužiteljske adrese. Za veći promet treba plaćeni geokoder na poslužitelju (kod je pripremljen u `lib/geocode.js`).

@@ -11,16 +11,16 @@ const BASE = 'http://127.0.0.1:8889' + PREFIX;
 const ctx = await chromium.launchPersistentContext(fs.mkdtempSync('/tmp/claude-0/pw-'), { headless: false, args: ['--no-sandbox'], viewport: { width: 420, height: 900 } });
 const page = await ctx.newPage(); const errs = []; page.on('pageerror', (e) => errs.push(e.message)); page.on('console', (m) => m.type() === 'error' && errs.push(m.text()));
 await page.goto(BASE); await page.waitForTimeout(1200);
-const order = await page.evaluate(() => [...document.querySelectorAll('main > section')].filter((s) => !s.hidden).map((s) => s.querySelector('h3')?.textContent));
+const order = await page.evaluate(() => [...document.querySelectorAll('main > section')].filter((s) => !s.hidden).map((s) => [s.getBoundingClientRect().top, s.querySelector('h3')?.textContent]).sort((a, b) => a[0] - b[0]).map((x) => x[1]).filter((t) => t !== 'Instaliraj aplikaciju'));
 console.log('redoslijed odjeljaka:', JSON.stringify(order));
 ok(order[0] === 'Gdje želiš obavijesti' && order[1] === 'Što se kopa kod tebe', 'grad je prvi, odmah ispod su najave');
 await page.type('#city-q', 'Rijeka', { delay: 40 }); await page.keyboard.press('Enter'); // Enter bira prvi prijedlog
 await page.waitForSelector('.city-li', { timeout: 30000 });
 ok((await page.locator('.city-li .parts').first().isHidden()), 'dijelovi grada su zatvoreni dok ih ne zatražiš');
-await page.waitForFunction(() => document.querySelectorAll('#ann-list li').length > 0, null, { timeout: 60000 });
-const n = await page.locator('#ann-list li').count(); console.log('najave:', n);
+await page.waitForFunction(() => document.querySelectorAll('#ann-list > li').length > 0, null, { timeout: 60000 });
+const n = await page.locator('#ann-list > li').count(); console.log('najave:', n);
 ok(await page.locator('#ann-map-all').isVisible(), 'gumb "Karta svih radova" postoji');
-await page.locator('#ann-list li').nth(1).click({ position: { x: 30, y: 30 } });
+await page.locator('#ann-list > li').nth(1).click({ position: { x: 30, y: 30 } });
 await page.waitForSelector('#map-dialog[open]', { timeout: 10000 });
 await page.waitForSelector('#map .leaflet-tile-loaded', { timeout: 30000 }).catch(() => {});
 await page.waitForTimeout(1500);
@@ -32,5 +32,7 @@ if (markers) { await page.locator('#map path.leaflet-interactive').first().click
 await page.screenshot({ path: 'notes/screens/map.png' });
 await page.keyboard.press('Escape'); await page.waitForTimeout(300);
 ok(!(await page.locator('#map-dialog').evaluate((d) => d.open)), 'karta se zatvara (Esc)');
+await page.click('#ann-map-all'); await page.waitForSelector('#map-dialog[open]'); await page.click('#map-close'); await page.waitForTimeout(300);
+ok(!(await page.locator('#map-dialog').evaluate((d) => d.open)), 'karta se zatvara gumbom Zatvori');
 console.log('greške:', errs.filter((e) => !/ERR_BLOCKED|Failed to load resource/.test(e)));
 await ctx.close(); server.close(); process.exit(process.exitCode || 0);
